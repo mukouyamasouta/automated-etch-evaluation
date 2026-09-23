@@ -1,0 +1,795 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>野島さん実験のDataset構成ガイド</title>
+  <style>
+    :root {
+      --ink:#172033; --muted:#64748b; --paper:#f7f9fc; --card:#fff;
+      --line:#dbe3ee; --blue:#2563eb; --blue-soft:#eaf2ff;
+      --teal:#0f766e; --teal-soft:#e7f7f4; --amber:#b45309; --amber-soft:#fff5dd;
+      --rose:#be123c; --rose-soft:#fff0f3; --violet:#6d28d9; --violet-soft:#f2ecff;
+      --green:#15803d; --green-soft:#ecfdf3;
+    }
+    *{box-sizing:border-box} html{scroll-behavior:smooth}
+    body{margin:0;background:var(--paper);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic UI","Yu Gothic",Meiryo,sans-serif;line-height:1.75}
+    a{color:var(--blue)} code,.mono{font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace}
+    code{background:#eef2f7;border-radius:6px;padding:.12rem .35rem;font-size:.9em;word-break:break-all}
+    .layout{display:grid;grid-template-columns:270px minmax(0,1fr);min-height:100vh}
+    nav{position:sticky;top:0;height:100vh;overflow:auto;background:#111827;color:#dbeafe;padding:24px 18px}
+    nav .brand{font-weight:800;color:#fff;font-size:1.05rem;line-height:1.45;margin-bottom:18px}
+    nav .eyebrow{color:#93c5fd;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase}
+    nav a{display:block;color:#cbd5e1;text-decoration:none;padding:8px 10px;border-radius:8px;font-size:.88rem;margin:2px 0}
+    nav a:hover{background:#1f2937;color:#fff}
+    nav .note{border-top:1px solid #334155;margin-top:18px;padding:16px 10px 0;color:#94a3b8;font-size:.75rem}
+    main{min-width:0}
+    .hero{padding:64px clamp(24px,5vw,76px) 48px;background:linear-gradient(135deg,#0f172a 0%,#183b71 64%,#0f766e 100%);color:#fff}
+    .hero .kicker{font-weight:700;color:#93c5fd;letter-spacing:.12em;font-size:.76rem}
+    h1{font-size:clamp(2rem,4.2vw,4rem);line-height:1.12;margin:.45rem 0 1.1rem;max-width:1000px}
+    .hero p{max-width:900px;color:#dbeafe;font-size:1.05rem}
+    .hero .path{margin-top:24px;background:rgba(15,23,42,.54);border:1px solid rgba(255,255,255,.22);padding:14px 16px;border-radius:12px;word-break:break-all;font-size:.85rem}
+    .wrap{max-width:1180px;margin:auto;padding:38px clamp(20px,4vw,56px) 90px}
+    section{scroll-margin-top:20px;margin:0 0 56px}
+    h2{font-size:1.75rem;line-height:1.35;margin:0 0 10px} h3{font-size:1.2rem;margin:30px 0 10px}
+    .lead{font-size:1.04rem;color:#334155;max-width:920px}
+    .grid{display:grid;gap:16px}.g2{grid-template-columns:repeat(2,minmax(0,1fr))}.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:0 8px 30px rgba(15,23,42,.045)}
+    .card h3,.card h4{margin-top:0}.metric{font-size:2rem;font-weight:850;line-height:1.1}.sub{color:var(--muted);font-size:.86rem}
+    .tag{display:inline-block;border-radius:99px;padding:4px 9px;font-weight:700;font-size:.72rem;margin-right:5px}
+    .t-blue{background:var(--blue-soft);color:#1d4ed8}.t-green{background:var(--green-soft);color:var(--green)}.t-amber{background:var(--amber-soft);color:var(--amber)}.t-rose{background:var(--rose-soft);color:var(--rose)}.t-violet{background:var(--violet-soft);color:var(--violet)}
+    .callout{border-left:5px solid var(--blue);background:var(--blue-soft);padding:16px 18px;border-radius:10px;margin:18px 0}
+    .callout.warn{border-color:#f59e0b;background:var(--amber-soft)}.callout.danger{border-color:#e11d48;background:var(--rose-soft)}.callout.ok{border-color:#22c55e;background:var(--green-soft)}
+    .flow{display:flex;align-items:stretch;gap:8px;overflow:auto;padding:12px 0 5px}
+    .step{min-width:150px;flex:1;background:#fff;border:1px solid var(--line);border-radius:14px;padding:15px;text-align:center}
+    .step strong{display:block;margin:.3rem 0}.arrow{align-self:center;color:#64748b;font-size:1.5rem;font-weight:800}
+    .icon{width:42px;height:42px;display:grid;place-items:center;border-radius:12px;margin:auto;background:var(--blue-soft);color:var(--blue);font-weight:900}
+    .tree{background:#0f172a;color:#dbeafe;border-radius:16px;padding:20px;overflow:auto;font-size:.84rem;line-height:1.65;white-space:pre}
+    .explorer{background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:0 10px 35px rgba(15,23,42,.06)}
+    .explorer-head{display:flex;gap:14px;align-items:center;justify-content:space-between;padding:16px 18px;background:#0f172a;color:#fff}
+    .explorer-path{font-family:"SFMono-Regular",Consolas,monospace;font-size:.86rem;word-break:break-all}.explorer-actions{flex:0 0 auto}
+    .reset-tree{border:1px solid #64748b;background:#1e293b;color:#fff;border-radius:9px;padding:8px 11px;cursor:pointer;font-weight:700}.reset-tree:hover{background:#334155}
+    .folder-list{padding:10px 14px 16px}.fs-folder{margin:8px 0;border:1px solid var(--line);border-radius:12px;background:#fff;padding:0;overflow:hidden}
+    .fs-folder>.folder-children{padding:4px 12px 13px 34px;background:#f8fafc;border-top:1px solid var(--line)}
+    .fs-folder summary{list-style:none;display:grid;grid-template-columns:minmax(230px,.8fr) minmax(280px,1.35fr) auto;gap:14px;align-items:center;padding:13px 15px;position:relative}
+    .fs-folder summary::-webkit-details-marker{display:none}.fs-folder summary:hover{background:#f1f5f9}
+    .fs-folder summary:before{content:"▶";color:#64748b;font-size:.68rem;position:absolute;left:13px}.fs-folder[open]>summary:before{transform:rotate(90deg)}
+    .fs-folder .node-name{font-family:"SFMono-Regular",Consolas,monospace;font-weight:800;padding-left:18px;word-break:break-word}
+    .fs-folder .node-name:before{content:"📁  ";font-family:initial}.fs-folder[open]>summary .node-name:before{content:"📂  "}
+    .node-desc{font-size:.84rem;color:#475569;font-weight:500}.node-usage{font-size:.72rem;font-weight:800;border-radius:999px;padding:4px 9px;background:var(--blue-soft);color:#1d4ed8;white-space:nowrap}
+    .leaf{display:grid;grid-template-columns:minmax(210px,.8fr) minmax(260px,1.35fr) auto;gap:14px;align-items:start;margin:7px 0;padding:12px 14px;background:#fff;border:1px solid var(--line);border-radius:10px}
+    .leaf-name{font-family:"SFMono-Regular",Consolas,monospace;font-size:.82rem;font-weight:750;word-break:break-word}.leaf-name:before{content:"📄  ";font-family:initial}.leaf.folder-note .leaf-name:before{content:"🖼️  "}
+    .leaf-desc{font-size:.82rem;color:#475569}.leaf-meta{font-size:.72rem;font-weight:800;color:#64748b;white-space:nowrap}.level-note{font-size:.78rem;color:#64748b;padding:7px 4px 2px}
+    #tree>.tree{display:none}
+    .mece-zone{position:relative;overflow:hidden;background:#0b1323;color:#dce7f5;border-radius:22px;padding:clamp(22px,4vw,42px);box-shadow:0 22px 55px rgba(15,23,42,.17)}
+    .mece-zone:before{content:"";position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(125,211,252,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(125,211,252,.055) 1px,transparent 1px);background-size:28px 28px}
+    .mece-zone>*{position:relative}.mece-kicker{font-family:"Avenir Next Condensed","Hiragino Sans",sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#7dd3fc;font-weight:800;font-size:.75rem}
+    .mece-title{font-family:"Iowan Old Style","Yu Mincho",serif;font-size:clamp(1.75rem,3vw,2.8rem);line-height:1.2;margin:.35rem 0 .7rem;color:#fff}.mece-intro{max-width:900px;color:#b9c8db}
+    .axis-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:#2a3a50;border:1px solid #2a3a50;margin:24px 0;border-radius:15px;overflow:hidden}
+    .axis-cell{background:#101c30;padding:17px}.axis-no{font-family:Georgia,serif;color:#fb923c;font-size:1.45rem;font-weight:800}.axis-cell b{display:block;color:#fff;margin:2px 0 5px}.axis-cell span{color:#9fb1c8;font-size:.8rem}
+    .taxonomy{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:20px 0}.taxon{min-height:176px;border:1px solid #314159;background:rgba(15,29,49,.86);padding:17px;border-radius:14px;transition:.2s transform,.2s border-color}.taxon:hover{transform:translateY(-3px);border-color:#7dd3fc}.taxon .big{font:800 1.06rem "Avenir Next",sans-serif;color:#fff}.taxon .micro{font-size:.72rem;color:#7dd3fc;letter-spacing:.09em;text-transform:uppercase}.taxon p{font-size:.82rem;color:#b9c8db;margin:.55rem 0}.taxon .equation{color:#fdba74;font-family:"SFMono-Regular",monospace;font-size:.76rem}
+    .dossier{margin:24px 0 0;display:grid;gap:15px}.folder-dossier{display:grid;grid-template-columns:190px minmax(0,1fr);background:#fff;color:var(--ink);border-radius:16px;overflow:hidden;border:1px solid #d7e0eb}
+    .dossier-label{padding:20px;background:#eaf2ff;border-right:1px solid #d7e0eb}.dossier-label.derived{background:#e7f7f4}.dossier-label.legacy{background:#fff5dd}.dossier-label.archive{background:#fff0f3}.dossier-label .serial{font:800 .7rem "Avenir Next",sans-serif;letter-spacing:.14em;color:#64748b}.dossier-label h3{margin:.35rem 0 .2rem;font:800 1.18rem "SFMono-Regular",monospace}.dossier-label p{font-size:.78rem;color:#475569;margin:0}
+    .dossier-body{padding:19px 21px}.fact-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.fact{border-left:3px solid #38bdf8;background:#f8fafc;padding:10px 12px}.fact:nth-child(2){border-color:#14b8a6}.fact:nth-child(3){border-color:#fb923c}.fact b{display:block;font-size:.73rem;color:#64748b;letter-spacing:.04em}.fact span{font-size:.86rem}.use-split{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}.use-box{border-radius:11px;padding:12px 14px;font-size:.84rem}.use-box.yes{background:#ecfdf3;border:1px solid #bbf7d0}.use-box.no{background:#fff7ed;border:1px solid #fed7aa}.use-box strong{display:block;margin-bottom:4px}
+    .scenario-lab{margin-top:28px;background:#f8fafc;color:var(--ink);border-radius:18px;padding:20px}.scenario-lab h3{margin:0 0 5px;font-family:"Iowan Old Style","Yu Mincho",serif;font-size:1.45rem}.scenario-tabs{display:flex;flex-wrap:wrap;gap:7px;margin:16px 0}.scenario-tab{border:1px solid #cbd5e1;background:#fff;color:#334155;padding:9px 13px;border-radius:999px;font-weight:800;cursor:pointer}.scenario-tab:hover,.scenario-tab.active{background:#0f172a;color:#fff;border-color:#0f172a}.scenario-note{font-size:.84rem;color:#475569;min-height:2.8em}.req-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.req-item{display:grid;grid-template-columns:28px 1fr auto;align-items:start;gap:8px;padding:12px;border:1px solid #dbe3ee;background:#fff;border-radius:11px;transition:.2s opacity,.2s transform}.req-item.off{opacity:.32;filter:grayscale(1)}.req-mark{width:22px;height:22px;display:grid;place-items:center;border-radius:50%;background:#dcfce7;color:#15803d;font-weight:900}.req-item.off .req-mark{background:#e2e8f0;color:#64748b}.req-path{font-family:"SFMono-Regular",monospace;font-size:.77rem;font-weight:750;word-break:break-word}.req-why{font-size:.75rem;color:#64748b;margin-top:3px}.req-state{font-size:.67rem;font-weight:900;letter-spacing:.05em;color:#15803d}.req-item.off .req-state{color:#64748b}
+    .decision-strip{display:grid;grid-template-columns:repeat(4,1fr);margin-top:18px;border:1px solid #dbe3ee;border-radius:13px;overflow:hidden}.decision-strip>div{padding:12px;border-right:1px solid #dbe3ee;background:#fff}.decision-strip>div:last-child{border-right:0}.decision-strip b{display:block;font-size:.74rem;color:#64748b}.decision-strip span{font-size:.82rem}
+    .purpose-zone{position:relative;background:#f2efe7;border:1px solid #d9d2c2;border-radius:22px;padding:clamp(20px,4vw,40px);overflow:hidden}.purpose-zone:after{content:"PURPOSE INDEX";position:absolute;right:-12px;top:18px;color:rgba(91,77,52,.07);font:900 clamp(2.8rem,7vw,6.5rem) "Avenir Next Condensed",sans-serif;letter-spacing:.04em;pointer-events:none}.purpose-zone>*{position:relative;z-index:1}
+    .purpose-kicker{display:inline-block;background:#172033;color:#fff;padding:5px 10px;font:800 .7rem "Avenir Next",sans-serif;letter-spacing:.15em;text-transform:uppercase}.purpose-title{font-family:"Iowan Old Style","Yu Mincho",serif;font-size:clamp(1.7rem,3vw,2.6rem);line-height:1.25;margin:12px 0 8px}.purpose-lead{max-width:900px;color:#5d5547}
+    .purpose-toolbar{display:flex;flex-wrap:wrap;gap:7px;margin:20px 0 14px;padding-bottom:14px;border-bottom:1px solid #d9d2c2}.purpose-filter{border:1px solid #a99f8c;background:transparent;color:#514938;padding:8px 13px;border-radius:4px;font-weight:800;cursor:pointer}.purpose-filter:hover,.purpose-filter.active{background:#d85d32;border-color:#d85d32;color:#fff}
+    .purpose-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.purpose-card{background:#fffdf8;border:1px solid #d9d2c2;border-radius:12px;padding:17px;box-shadow:5px 5px 0 rgba(91,77,52,.08);transition:.18s transform,.18s opacity}.purpose-card:hover{transform:translate(-2px,-2px)}.purpose-card.hidden{display:none}
+    .purpose-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.purpose-path{font:800 .8rem "SFMono-Regular",monospace;word-break:break-word;color:#172033}.purpose-kind{flex:0 0 auto;font-size:.66rem;font-weight:900;letter-spacing:.06em;padding:4px 7px;border:1px solid #9b8d73;color:#695d48;background:#f5f0e6}
+    .purpose-sentence{font-family:"Iowan Old Style","Yu Mincho",serif;font-size:1.06rem;font-weight:700;line-height:1.55;margin:12px 0;color:#172033}.purpose-sentence mark{background:#ffdd6e;padding:.06em .16em;color:inherit}.purpose-why{border-top:1px dashed #cfc5b3;padding-top:10px;color:#665e50;font-size:.8rem}.purpose-why b{color:#d85d32}.purpose-dependency{margin-top:8px;color:#475569;font-size:.74rem}.purpose-dependency code{background:#eee7da}
+    .purpose-table-wrap{margin-top:24px;overflow:auto;border:1px solid #cfc5b3;border-radius:12px}.purpose-table{min-width:980px;border:0;border-radius:0}.purpose-table th{background:#172033;color:#fff}.purpose-table td{background:#fffdf8}.purpose-table .core td{background:#f0fdf4}.purpose-table .legacy-row td{background:#fff8eb;color:#6b6253}.role-pill{display:inline-block;border-radius:3px;padding:3px 6px;background:#dbeafe;color:#1d4ed8;font-weight:850;font-size:.68rem}.role-pill.b{background:#dcfce7;color:#166534}.role-pill.old{background:#ffedd5;color:#9a3412}
+    .sentence-template{margin-top:18px;background:#172033;color:#dce7f5;padding:17px 19px;border-radius:12px;font-family:"SFMono-Regular",monospace;font-size:.8rem}.sentence-template b{color:#fdba74}.sentence-template span{color:#7dd3fc}
+    table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden;border:1px solid var(--line);font-size:.88rem}
+    th,td{text-align:left;vertical-align:top;border-bottom:1px solid var(--line);padding:10px 12px}th{background:#edf3fb;color:#334155;font-size:.8rem}tr:last-child td{border-bottom:0}
+    .table-scroll{overflow:auto;border-radius:14px}.table-scroll table{min-width:820px}
+    .bar-row{display:grid;grid-template-columns:110px 1fr 62px;gap:10px;align-items:center;margin:8px 0;font-size:.82rem}
+    .bar{height:12px;border-radius:99px;background:#e5e7eb;overflow:hidden}.bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--blue),#38bdf8);border-radius:99px}
+    .diagram{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px;overflow:auto}.diagram svg{display:block;min-width:760px;width:100%;height:auto}
+    .legend{display:flex;flex-wrap:wrap;gap:12px;color:var(--muted);font-size:.8rem;margin:10px 0}.dot{display:inline-block;width:10px;height:10px;border-radius:99px;margin-right:5px}
+    .file-anatomy{display:grid;grid-template-columns:repeat(4,auto);justify-content:start;gap:4px;overflow:auto;padding:14px 0}
+    .chunk{padding:14px 16px;border:1px solid var(--line);background:#fff}.chunk:first-child{border-radius:10px 0 0 10px}.chunk:last-child{border-radius:0 10px 10px 0}.chunk b{display:block;color:var(--blue)}
+    details{background:#fff;border:1px solid var(--line);border-radius:12px;margin:9px 0;padding:0 15px}summary{cursor:pointer;font-weight:750;padding:13px 0}details>div{padding:0 0 15px}
+    .checklist{list-style:none;padding:0}.checklist li{position:relative;padding:9px 10px 9px 38px;margin:6px 0;background:#fff;border:1px solid var(--line);border-radius:10px}.checklist li:before{content:"";position:absolute;left:13px;top:14px;width:14px;height:14px;border:2px solid #94a3b8;border-radius:4px}
+    .small{font-size:.82rem;color:var(--muted)} .nowrap{white-space:nowrap}.num{font-variant-numeric:tabular-nums}
+    footer{color:#64748b;border-top:1px solid var(--line);padding-top:24px;font-size:.82rem}
+    @media(max-width:900px){.layout{display:block}nav{position:relative;height:auto}nav a{display:inline-block}.g2,.g3,.g4{grid-template-columns:1fr}.hero{padding-top:42px}.wrap{padding-bottom:50px}.arrow{transform:rotate(90deg)}.flow{flex-direction:column}.step{min-width:0}.fs-folder summary,.leaf{grid-template-columns:1fr;gap:4px}.fs-folder>.folder-children{padding-left:16px}.explorer-head{align-items:flex-start;flex-direction:column}.axis-grid,.taxonomy{grid-template-columns:1fr 1fr}.folder-dossier{grid-template-columns:1fr}.dossier-label{border-right:0;border-bottom:1px solid #d7e0eb}.fact-grid,.req-grid,.decision-strip,.purpose-grid{grid-template-columns:1fr}.decision-strip>div{border-right:0;border-bottom:1px solid #dbe3ee}}
+    @media(max-width:560px){.axis-grid,.taxonomy,.use-split{grid-template-columns:1fr}.mece-zone{padding:20px 14px}.scenario-lab{padding:15px 11px}}
+    @media print{nav{display:none}.layout{display:block}.hero{background:#fff;color:#111;padding:20px 0}.hero p{color:#333}.hero .path{color:#111;border-color:#aaa}.wrap{padding:20px}section{break-inside:avoid}.card,.diagram,table{box-shadow:none}}
+  </style>
+</head>
+<body>
+<div class="layout">
+  <nav aria-label="目次">
+    <div class="eyebrow">TRACE GUIDE</div>
+    <div class="brand">野島さん実験<br>Dataset構成ガイド</div>
+    <a href="#summary">1. 結論を先に</a>
+    <a href="#mental">2. まず持つべき全体像</a>
+    <a href="#tree">3. クリック式ファイル説明</a>
+    <a href="#folder-mece">3A. 4フォルダMECE詳細</a>
+    <a href="#purpose-index">3B. 各データの使い道</a>
+    <a href="#v20250515">4. 20250515（GaN主実験）</a>
+    <a href="#v20260118">5. 20260118 _7（汎用性）</a>
+    <a href="#csv">6. CSVの読み方</a>
+    <a href="#pipelines">7. 手法A / Bとデータ</a>
+    <a href="#lineage">8. データの派生関係</a>
+    <a href="#audit">9. 整合性監査</a>
+    <a href="#rebuild">10. 自分の環境へ再構築</a>
+    <a href="#next">11. 次の作業</a>
+    <div class="note">2026-09-23時点のフォルダ棚卸し。TIFF/PNGの画像内容は読まず、パス・ファイル名・件数・CSVのみを解析。</div>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <div class="kicker">SEM IMAGE ANALYSIS / DATASET INVENTORY</div>
+      <h1>Datasetは「元画像」「教師マスク」「座標」の3層で読む</h1>
+      <p>野島さんの実験をトレースするために、実際に置かれたDatasetの構成、各CSVが指すファイル、手法A（セグメンテーション先行）と手法B（物体検出先行）の使い分けを一枚にまとめた。</p>
+      <div class="path mono">/Volumes/met-info/Research Progress/Mukoyama/Model_backup/Docker/Dataset</div>
+    </header>
+
+    <div class="wrap">
+      <section id="summary">
+        <h2>1. 結論を先に</h2>
+        <p class="lead">実体は、論文の主実験に対応する <code>20250515</code> 系と、異なる材料・プロセス条件での汎用性検証に対応する <code>20260118 ..._7</code> 系に大別できる。一方、操作マニュアル記載の <code>20260224 ..._8</code> は、指定されたDataset内には存在しない。</p>
+        <div class="grid g4">
+          <div class="card"><span class="tag t-blue">主実験</span><div class="metric num">92</div><div>CSVで使用する元SEM画像</div><div class="sub">train 75 / val 8 / test 9</div></div>
+          <div class="card"><span class="tag t-violet">汎用性</span><div class="metric num">15</div><div>_7の元SEM画像</div><div class="sub">train 9 / evaluation 6</div></div>
+          <div class="card"><span class="tag t-green">切出し</span><div class="metric num">460</div><div>主実験の個別構造ペア</div><div class="sub">Structure_padded</div></div>
+          <div class="card"><span class="tag t-amber">汎用性切出し</span><div class="metric num">163</div><div>_7の個別構造ペア</div><div class="sub">97 train + 66 evaluation</div></div>
+        </div>
+        <div class="callout warn"><strong>マニュアルと現物の版の差</strong><br>
+          マニュアルは <code>20260224 Image_Dataset_8</code> / <code>20260224 CSV_Data_8</code> を指すが、実フォルダは最新で <code>20260118 ..._7</code>。完全トレース前に、<code>_8</code> が別場所にあるかを確認する必要がある。
+        </div>
+      </section>
+
+      <section id="mental">
+        <h2>2. まず持つべき全体像</h2>
+        <p class="lead">Datasetは学習コードそのものではない。学習コードが「何を入力し、何を正解とするか」を定義する素材置き場である。</p>
+        <div class="flow" aria-label="Datasetの3要素">
+          <div class="step"><div class="icon">I</div><strong>Images</strong><span class="small">元SEM画像または切出しSEM画像。モデルへの入力。</span></div>
+          <div class="arrow">＋</div>
+          <div class="step"><div class="icon" style="background:var(--violet-soft);color:var(--violet)">L</div><strong>Labels</strong><span class="small">基板=1、背景=0の二値マスク。U-Netの正解。</span></div>
+          <div class="arrow">＋</div>
+          <div class="step"><div class="icon" style="background:var(--teal-soft);color:var(--teal)">C</div><strong>CSV</strong><span class="small">分割、パス、サイズ、ボックス座標を結ぶ索引。</span></div>
+          <div class="arrow">→</div>
+          <div class="step"><div class="icon" style="background:var(--green-soft);color:var(--green)">M</div><strong>Model</strong><span class="small">U-NetまたはFaster R-CNNがCSVを読み、必要ファイルを取得。</span></div>
+        </div>
+        <div class="grid g3" style="margin-top:18px">
+          <div class="card"><h3>Original</h3><p>画像全体。一枚に複数のエッチング構造を含む。物体検出では1画像が1サンプル。</p></div>
+          <div class="card"><h3>Structure_padded</h3><p>検出用座標に基づき、構造一つずつを余白付きで切り出した画像。手法BのU-Net入力。</p></div>
+          <div class="card"><h3>Segmented</h3><p>SEM画像ではなく二値マスクをFaster R-CNNの入力にする設定。手法Aに対応。</p></div>
+        </div>
+      </section>
+
+      <section id="tree">
+        <h2>3. クリックで1階層ずつ開くファイル説明</h2>
+        <p class="lead">初期表示は <code>Dataset/</code> の直下だけである。フォルダ行をクリックすると、その中の<strong>次の1階層だけ</strong>が開く。各行に「何が入るか」と「どの時に使うか」を併記した。</p>
+        <div class="explorer" id="dataset-explorer">
+          <div class="explorer-head">
+            <div><div class="small" style="color:#94a3b8">DATASET EXPLORER</div><div class="explorer-path">.../Docker/Dataset/</div></div>
+            <button class="reset-tree" type="button" onclick="closeDatasetTree()">すべて閉じる</button>
+          </div>
+          <div class="folder-list">
+            <div class="level-note">現在はDataset直下のみ表示。フォルダを選んで下の階層へ進む。</div>
+
+            <details class="fs-folder">
+              <summary><span class="node-name">20250515 Image_Dataset</span><span class="node-desc">GaN主実験のSEM画像と教師マスク。元画像と派生画像の本体を保管。</span><span class="node-usage">画像本体</span></summary>
+              <div class="folder-children">
+                <details class="fs-folder"><summary><span class="node-name">Original</span><span class="node-desc">切出し前の全体SEMと全体マスク。</span><span class="node-usage">検出・手法A</span></summary><div class="folder-children">
+                  <details class="fs-folder"><summary><span class="node-name">Images</span><span class="node-desc"><code>Image_N.tif</code> 形式の全体SEM画像。</span><span class="node-usage">100 TIF</span></summary><div class="folder-children"><div class="leaf folder-note"><span class="leaf-name">Image_1.tif 〜 Image_100.tif</span><span class="leaf-desc">Faster R-CNNの入力、または手法Aの全体U-Net入力。CSVが実際に使うのは92枚。</span><span class="leaf-meta">入力画像</span></div></div></details>
+                  <details class="fs-folder"><summary><span class="node-name">Labels</span><span class="node-desc"><code>Label_N.tif</code> 形式の全体二値マスク。</span><span class="node-usage">98 TIF</span></summary><div class="folder-children"><div class="leaf folder-note"><span class="leaf-name">Label_1.tif 〜 Label_98.tif</span><span class="leaf-desc">U-Netの正解。手法AのDetection/Segmentedではこの形式を検出モデルへ入れる。</span><span class="leaf-meta">教師マスク</span></div></div></details>
+                  <details class="fs-folder"><summary><span class="node-name">Labels_1</span><span class="node-desc">テストデータ用の別版ラベル。</span><span class="node-usage">9 TIF</span></summary><div class="folder-children"><div class="leaf folder-note"><span class="leaf-name">Label_90.tif 〜</span><span class="leaf-desc"><code>Detection/Segmented/test_1.csv</code> からのみ参照。通常の追試では優先しない。</span><span class="leaf-meta">比較用</span></div></div></details>
+                </div></details>
+                <details class="fs-folder"><summary><span class="node-name">Structure_padded</span><span class="node-desc">構造1個ずつを余白付きで切り出したSEM・マスクペア。</span><span class="node-usage">手法BのU-Net</span></summary><div class="folder-children">
+                  <details class="fs-folder"><summary><span class="node-name">Images</span><span class="node-desc"><code>Image_元ID_構造番号.tif</code> の切出しSEM。</span><span class="node-usage">460 TIF</span></summary><div class="folder-children"><div class="leaf folder-note"><span class="leaf-name">Image_90_0.tif 〜 Image_90_4.tif</span><span class="leaf-desc">検出座標から作成。Detected_paddedのU-Net入力に使う。</span><span class="leaf-meta">切出し入力</span></div></div></details>
+                  <details class="fs-folder"><summary><span class="node-name">Labels</span><span class="node-desc">同じ矩形でマスクを切り出した正解。</span><span class="node-usage">460 TIF</span></summary><div class="folder-children"><div class="leaf folder-note"><span class="leaf-name">Label_90_0.tif 〜 Label_90_4.tif</span><span class="leaf-desc">Imagesと1対1対応。U-Netが構造ごとの境界を学ぶ教師。</span><span class="leaf-meta">切出し教師</span></div></div></details>
+                  <details class="fs-folder"><summary><span class="node-name">Labels_1</span><span class="node-desc">別版ラベルを切り出した比較集合。</span><span class="node-usage">45 TIF</span></summary><div class="folder-children"><div class="leaf folder-note"><span class="leaf-name">Label_90_0.tif 〜</span><span class="leaf-desc">9枚×5構造。主要Detected_padded CSVは通常のLabelsを参照する。</span><span class="leaf-meta">比較用</span></div></div></details>
+                </div></details>
+                <details class="fs-folder"><summary><span class="node-name">Squared</span><span class="node-desc">3構造を含む正方形単位の旧実験データ。</span><span class="node-usage">旧実験</span></summary><div class="folder-children"><div class="leaf folder-note"><span class="leaf-name">Images / Labels</span><span class="leaf-desc">それぞれ258 TIF。Squared系CSVでのみ使う。最終手法Bの再現では不要。</span><span class="leaf-meta">258ペア</span></div></div></details>
+                <details class="fs-folder"><summary><span class="node-name">Others</span><span class="node-desc">開発中の切出し方式と中間物。一部CSVはパスが切れている。</span><span class="node-usage">保管物</span></summary><div class="folder-children"><div class="leaf folder-note"><span class="leaf-name">Structure</span><span class="leaf-desc">crop0〜crop2の旧切出し。Images 774 / Labels 774。</span><span class="leaf-meta">774ペア</span></div><div class="leaf folder-note"><span class="leaf-name">20250524Structure_padded</span><span class="leaf-desc">改訂された旧切出し群。最終構成の追試では使わない。</span><span class="leaf-meta">774ペア</span></div></div></details>
+              </div>
+            </details>
+
+            <details class="fs-folder">
+              <summary><span class="node-name">20250515 CSV_Data</span><span class="node-desc">GaN主実験のパス、分割、画像サイズ、検出座標を保持。</span><span class="node-usage">学習索引</span></summary>
+              <div class="folder-children">
+                <details class="fs-folder"><summary><span class="node-name">Segmentation</span><span class="node-desc">U-Net用。入力画像と正解マスクを1行ずつ結ぶ。</span><span class="node-usage">U-Net</span></summary><div class="folder-children">
+                  <details class="fs-folder"><summary><span class="node-name">Original</span><span class="node-desc">全体画像で学ぶ手法A用。</span><span class="node-usage">現役・手法A</span></summary><div class="folder-children"><div class="leaf"><span class="leaf-name">train.csv</span><span class="leaf-desc">75行。ランダムクロップを伴うU-Net学習用。</span><span class="leaf-meta">75 rows</span></div><div class="leaf"><span class="leaf-name">val.csv</span><span class="leaf-desc">8行。ハイパーパラメータ・エポック選択。</span><span class="leaf-meta">8 rows</span></div><div class="leaf"><span class="leaf-name">test.csv</span><span class="leaf-desc">9行。最終性能評価のみに使う。</span><span class="leaf-meta">9 rows</span></div></div></details>
+                  <details class="fs-folder"><summary><span class="node-name">Detected_padded</span><span class="node-desc">構造ごとの切出しを学ぶ手法B用。</span><span class="node-usage">現役・手法B</span></summary><div class="folder-children"><div class="leaf"><span class="leaf-name">train.csv</span><span class="leaf-desc">375構造。切出しU-Netの学習用。</span><span class="leaf-meta">375 rows</span></div><div class="leaf"><span class="leaf-name">val.csv</span><span class="leaf-desc">40構造。学習中のモデル選択用。</span><span class="leaf-meta">40 rows</span></div><div class="leaf"><span class="leaf-name">test.csv</span><span class="leaf-desc">45構造。未知画像での最終評価用。</span><span class="leaf-meta">45 rows</span></div></div></details>
+                  <details class="fs-folder"><summary><span class="node-name">Squared / Detected / Others</span><span class="node-desc">旧U-Net実験。Detected系は参照切れを含む。</span><span class="node-usage">旧・要修正</span></summary><div class="folder-children"><div class="leaf"><span class="leaf-name">train / val / test.csv</span><span class="leaf-desc">旧中間データ用。パス修正なしでは使えないCSVがある。</span><span class="leaf-meta">優先度低</span></div></div></details>
+                </div></details>
+                <details class="fs-folder"><summary><span class="node-name">Detection</span><span class="node-desc">Faster R-CNN用。クラスID配列とboxes配列を保持。</span><span class="node-usage">Faster R-CNN</span></summary><div class="folder-children">
+                  <details class="fs-folder"><summary><span class="node-name">Original</span><span class="node-desc">元SEM画像で検出を学ぶ手法B用。</span><span class="node-usage">現役・手法B</span></summary><div class="folder-children"><div class="leaf"><span class="leaf-name">train.csv</span><span class="leaf-desc">75画像、375 boxes。Faster R-CNN学習用。</span><span class="leaf-meta">75 rows</span></div><div class="leaf"><span class="leaf-name">val.csv</span><span class="leaf-desc">8画像、40 boxes。モデル選択用。</span><span class="leaf-meta">8 rows</span></div><div class="leaf"><span class="leaf-name">test.csv</span><span class="leaf-desc">9画像、45 boxes。検出妥当性評価用。</span><span class="leaf-meta">9 rows</span></div></div></details>
+                  <details class="fs-folder"><summary><span class="node-name">Segmented</span><span class="node-desc">二値マスク上で検出を学ぶ手法A用。</span><span class="node-usage">手法A</span></summary><div class="folder-children"><div class="leaf"><span class="leaf-name">train / val / test.csv</span><span class="leaf-desc">75 / 8 / 9画像。<code>imgpath</code> がImagesではなくLabelsを指す。</span><span class="leaf-meta">92 rows</span></div><div class="leaf"><span class="leaf-name">test_1.csv</span><span class="leaf-desc"><code>Labels_1</code> を参照する別テスト版。</span><span class="leaf-meta">9 rows</span></div></div></details>
+                  <details class="fs-folder"><summary><span class="node-name">Squared / Others</span><span class="node-desc">3構造単位などの旧検出実験。</span><span class="node-usage">旧実験</span></summary><div class="folder-children"><div class="leaf"><span class="leaf-name">train / val / test.csv</span><span class="leaf-desc">最終手法A/Bの再現では優先度が低い。</span><span class="leaf-meta">保管</span></div></div></details>
+                </div></details>
+              </div>
+            </details>
+
+            <details class="fs-folder">
+              <summary><span class="node-name">20260118 Image_Dataset_7</span><span class="node-desc">異なる材料・プロセス条件に対する汎用性検証画像。</span><span class="node-usage">汎用性画像</span></summary>
+              <div class="folder-children">
+                <details class="fs-folder"><summary><span class="node-name">Original</span><span class="node-desc">切出し前のSEMと全体マスク。</span><span class="node-usage">15ペア</span></summary><div class="folder-children"><div class="leaf folder-note"><span class="leaf-name">Images</span><span class="leaf-desc"><code>24041924_Tilt Correction_023.tif</code> 等。Detection/OriginalとSegmentation/Originalの入力。</span><span class="leaf-meta">15 TIF</span></div><div class="leaf folder-note"><span class="leaf-name">Labels</span><span class="leaf-desc"><code>label_Correction_023.tif</code> 等。U-Netの教師とDetection/Segmentedの入力。</span><span class="leaf-meta">15 TIF</span></div></div></details>
+                <details class="fs-folder"><summary><span class="node-name">Structure_padded</span><span class="node-desc">9〜12構造/画像を1構造ずつ切り出したペア。</span><span class="node-usage">163ペア</span></summary><div class="folder-children"><div class="leaf folder-note"><span class="leaf-name">Images</span><span class="leaf-desc">汎用性検証の切出しU-Net入力。</span><span class="leaf-meta">163 TIF</span></div><div class="leaf folder-note"><span class="leaf-name">Labels</span><span class="leaf-desc">Imagesと1対1対応する切出し二値マスク。</span><span class="leaf-meta">163 TIF</span></div></div></details>
+              </div>
+            </details>
+
+            <details class="fs-folder">
+              <summary><span class="node-name">20260118 CSV_Data_7</span><span class="node-desc">汎用性検証の分割、パス、検出ボックス。valとtestは同一。</span><span class="node-usage">汎用性索引</span></summary>
+              <div class="folder-children">
+                <details class="fs-folder"><summary><span class="node-name">Segmentation</span><span class="node-desc">U-Net用のOriginalとDetected_padded。</span><span class="node-usage">U-Net</span></summary><div class="folder-children"><details class="fs-folder"><summary><span class="node-name">Original</span><span class="node-desc">全体画像と全体マスクのペア。</span><span class="node-usage">手法A</span></summary><div class="folder-children"><div class="leaf"><span class="leaf-name">train.csv</span><span class="leaf-desc">9枚。全体U-Netの学習用。ID=14が2行ある。</span><span class="leaf-meta">9 rows</span></div><div class="leaf"><span class="leaf-name">val.csv / test.csv</span><span class="leaf-desc">どちらも6枚で内容も同一。独立valではない。</span><span class="leaf-meta">6 + 6</span></div></div></details><details class="fs-folder"><summary><span class="node-name">Detected_padded</span><span class="node-desc">切出し構造ごとのU-Net用。</span><span class="node-usage">手法B</span></summary><div class="folder-children"><div class="leaf"><span class="leaf-name">train.csv</span><span class="leaf-desc">97構造の画像・マスクペア。</span><span class="leaf-meta">97 rows</span></div><div class="leaf"><span class="leaf-name">val.csv / test.csv</span><span class="leaf-desc">どちらも66構造で内容も同一。</span><span class="leaf-meta">66 + 66</span></div></div></details></div></details>
+                <details class="fs-folder"><summary><span class="node-name">Detection</span><span class="node-desc">Faster R-CNN用のOriginal / Segmentedと確認画像。</span><span class="node-usage">Faster R-CNN</span></summary><div class="folder-children"><details class="fs-folder"><summary><span class="node-name">Original</span><span class="node-desc">元SEMを入力にする手法B用。</span><span class="node-usage">手法B</span></summary><div class="folder-children"><div class="leaf"><span class="leaf-name">train.csv</span><span class="leaf-desc">9画像、97 boxes。</span><span class="leaf-meta">9 rows</span></div><div class="leaf"><span class="leaf-name">val.csv / test.csv</span><span class="leaf-desc">各6画像、66 boxes。内容同一。</span><span class="leaf-meta">6 + 6</span></div></div></details><details class="fs-folder"><summary><span class="node-name">Segmented</span><span class="node-desc">全体二値マスクを入力にする手法A用。</span><span class="node-usage">手法A</span></summary><div class="folder-children"><div class="leaf"><span class="leaf-name">train / val / test.csv</span><span class="leaf-desc">Originalと同じboxesだが <code>imgpath</code> はLabelsを指す。</span><span class="leaf-meta">9 / 6 / 6</span></div></div></details><details class="fs-folder"><summary><span class="node-name">Segmented/boxed_vis</span><span class="node-desc">ボックス座標を確認するPNG。学習入力ではない。</span><span class="node-usage">目視確認</span></summary><div class="folder-children"><div class="leaf folder-note"><span class="leaf-name">*_boxes.png</span><span class="leaf-desc">アノテーションのQA用派生物と考えられる。</span><span class="leaf-meta">15 PNG</span></div></div></details></div></details>
+              </div>
+            </details>
+
+            <details class="fs-folder"><summary><span class="node-name">label_Mie</span><span class="node-desc"><code>label_Correction_*.tif</code> の別置き集合。CSVは直接参照していない。</span><span class="node-usage">別置きラベル</span></summary><div class="folder-children"><div class="leaf folder-note"><span class="leaf-name">label_Correction_*.tif</span><span class="leaf-desc">_7 Original/Labelsに関連するラベル候補。出典確認後に原本またはバックアップとして扱う。</span><span class="leaf-meta">15 TIF</span></div></div></details>
+          </div>
+        </div>
+        <div class="tree" role="img" aria-label="Datasetツリー">Dataset/
+├── 20250515 Image_Dataset/                 ← GaN主実験の画像本体
+│   ├── Original/
+│   │   ├── Images/          100 TIF      元SEM画像
+│   │   ├── Labels/           98 TIF      元画像対応の二値マスク
+│   │   └── Labels_1/          9 TIF      別版ラベル（test_1.csv用）
+│   ├── Structure_padded/
+│   │   ├── Images/          460 TIF      1構造ずつの切出し
+│   │   ├── Labels/          460 TIF      対応する切出しマスク
+│   │   └── Labels_1/         45 TIF      別版ラベル
+│   ├── Squared/                              旧実験の正方形系中間データ
+│   │   ├── Images/          258 TIF
+│   │   └── Labels/          258 TIF
+│   └── Others/                               旧切出し方式・検証中間物
+│       ├── Structure/             774 + 774 TIF
+│       └── 20250524Structure_padded/ 774 + 774 TIF
+│
+├── 20250515 CSV_Data/                   ← GaN主実験の索引・教師情報
+│   ├── Segmentation/
+│   │   ├── Original/          train / val / test
+│   │   ├── Detected_padded/   train / val / test
+│   │   ├── Squared/           旧実験
+│   │   └── Detected, Others/  参照切れを含む旧実験
+│   └── Detection/
+│       ├── Original/          SEM画像→Faster R-CNN（手法B）
+│       ├── Segmented/         マスク→Faster R-CNN（手法A）
+│       └── Squared, Others/   旧実験
+│
+├── 20260118 Image_Dataset_7/              ← 汎用性検証の画像本体
+│   ├── Original/          Images 15 / Labels 15
+│   └── Structure_padded/  Images 163 / Labels 163
+├── 20260118 CSV_Data_7/                ← 汎用性検証のCSV
+│   ├── Segmentation/      Original / Detected_padded
+│   └── Detection/         Original / Segmented / boxed_vis
+└── label_Mie/             15 TIF      別置きのラベル候補</div>
+        <p class="small">注：<code>boxed_vis</code> の15 PNGは座標の目視確認用と考えられる。PNG内容は本調査では開いていない。</p>
+      </section>
+
+      <section id="folder-mece">
+        <div class="mece-zone">
+          <div class="mece-kicker">Four folders / zero overlap</div>
+          <h2 class="mece-title">Original・Structure_padded・Squared・Othersを<br>MECEに分解する</h2>
+          <p class="mece-intro">4つは同列の学習データではない。<strong>Originalは原本</strong>、<strong>Structure_paddedは最終手法B用の派生物</strong>、<strong>SquaredとOthersは旧方式の中間物</strong>である。以下では、役割が重ならない4軸で分類する。</p>
+
+          <div class="axis-grid" aria-label="MECEの4分類軸">
+            <div class="axis-cell"><span class="axis-no">01</span><b>データの身分</b><span>原本か、現行派生物か、旧実験物か</span></div>
+            <div class="axis-cell"><span class="axis-no">02</span><b>画像の粒度</b><span>全体SEMか、3構造単位か、1構造単位か</span></div>
+            <div class="axis-cell"><span class="axis-no">03</span><b>生成元と生成方法</b><span>手動アノテーションか、boxesによる切出しか</span></div>
+            <div class="axis-cell"><span class="axis-no">04</span><b>使用フェーズ</b><span>検出学習、U-Net学習、評価、旧検証のどこか</span></div>
+          </div>
+
+          <div class="taxonomy" aria-label="4フォルダの位置付け">
+            <div class="taxon"><div class="micro">Canonical source</div><div class="big">Original</div><p>切出し前の原本。データ系譜の出発点で、再生成の根拠。</p><div class="equation">1枚 ≈ 5構造</div></div>
+            <div class="taxon"><div class="micro">Canonical derivative</div><div class="big">Structure_padded</div><p>Originalから構造単位で切り出した、手法BのU-Net用現行データ。</p><div class="equation">92枚 × 5 = 460構造</div></div>
+            <div class="taxon"><div class="micro">Legacy intermediate</div><div class="big">Squared</div><p>1枚に3構造を含む正方形系。現行パイプラインの手前で試した方式。</p><div class="equation">258枚 × 3 = 774構造</div></div>
+            <div class="taxon"><div class="micro">Legacy derivatives</div><div class="big">Others</div><p>Squared系から作った個別切出しや改訂版。開発履歴の保管領域。</p><div class="equation">774ペア × 2系統</div></div>
+          </div>
+
+          <div class="dossier">
+            <article class="folder-dossier">
+              <div class="dossier-label"><div class="serial">A / SOURCE</div><h3>Original</h3><p>全工程の再現元となる原本層</p></div>
+              <div class="dossier-body">
+                <div class="fact-grid">
+                  <div class="fact"><b>データ単位</b><span>全体SEM 1枚。原則5構造と撮像情報・スケールバーを含む</span></div>
+                  <div class="fact"><b>中身</b><span><code>Images</code> 100 TIF、<code>Labels</code> 98 TIF、別版<code>Labels_1</code> 9 TIF</span></div>
+                  <div class="fact"><b>ペア規則</b><span><code>Image_90.tif</code> ↔ <code>Label_90.tif</code></span></div>
+                  <div class="fact"><b>生成方法</b><span>ImagesはSEM撮像。LabelsはGIMP等で基板/背景を手動二値化</span></div>
+                  <div class="fact"><b>対応CSV</b><span><code>Detection/Original</code>、<code>Segmentation/Original</code>、<code>Detection/Segmented</code></span></div>
+                  <div class="fact"><b>注意</b><span>物理ファイル100枚に対し、現行Original CSVの参照は92枚</span></div>
+                </div>
+                <div class="use-split">
+                  <div class="use-box yes"><strong>使う場面</strong>Faster R-CNNの学習、手法AのU-Net学習、Structure_paddedの再生成、全体マスクとの比較評価。</div>
+                  <div class="use-box no"><strong>使わない場面</strong>構造ごとのU-Netに直接入力する場合。その役割はStructure_paddedが担う。</div>
+                </div>
+              </div>
+            </article>
+
+            <article class="folder-dossier">
+              <div class="dossier-label derived"><div class="serial">B / DERIVED</div><h3>Structure_padded</h3><p>手法BのU-Netを成立させる構造単位層</p></div>
+              <div class="dossier-body">
+                <div class="fact-grid">
+                  <div class="fact"><b>データ単位</b><span>エッチング構造1個。周囲の基板・背景を余白として含む</span></div>
+                  <div class="fact"><b>中身</b><span><code>Images</code> 460 TIF、<code>Labels</code> 460 TIF、別版<code>Labels_1</code> 45 TIF</span></div>
+                  <div class="fact"><b>ペア規則</b><span><code>Image_90_0.tif</code> ↔ <code>Label_90_0.tif</code></span></div>
+                  <div class="fact"><b>生成方法</b><span>Detection CSVのboxesを、Original/ImagesとOriginal/Labelsの両方に同じ座標で適用</span></div>
+                  <div class="fact"><b>対応CSV</b><span><code>Segmentation/Detected_padded</code>：375 train + 40 val + 45 test</span></div>
+                  <div class="fact"><b>paddedの目的</b><span>上下端の欠落を防ぎ、検出座標のずれと周辺文脈を吸収</span></div>
+                </div>
+                <div class="use-split">
+                  <div class="use-box yes"><strong>使う場面</strong>手法BのU-Net再学習、構造単位のセグメンテーション単体評価、教師付きテスト。</div>
+                  <div class="use-box no"><strong>使わない場面</strong>Faster R-CNNの学習。新規画像の推論では、検出boxesからその場で切り出すため事前作成不要。</div>
+                </div>
+              </div>
+            </article>
+
+            <article class="folder-dossier">
+              <div class="dossier-label legacy"><div class="serial">C / LEGACY</div><h3>Squared</h3><p>現行手法の前に試した3構造単位層</p></div>
+              <div class="dossier-body">
+                <div class="fact-grid">
+                  <div class="fact"><b>データ単位</b><span>縦横が同じ正方形画像1枚に、3つのエッチング構造</span></div>
+                  <div class="fact"><b>中身</b><span><code>Images</code> 258 TIF + <code>Labels</code> 258 TIF</span></div>
+                  <div class="fact"><b>検出アノテーション</b><span>1行あたりlabels=3個、boxes=3個。合計774構造</span></div>
+                  <div class="fact"><b>対応CSV</b><span><code>Detection/Squared</code>、<code>Detection/Others/Squared_padding</code>、<code>Segmentation/Squared</code></span></div>
+                  <div class="fact"><b>開発上の目的</b><span>全体画像より小さく、1構造切出しより文脈が広い中間粒度の検証</span></div>
+                  <div class="fact"><b>現在の位置付け</b><span>論文の最終的な手法A/Bが直接使うデータではない</span></div>
+                </div>
+                <div class="use-split">
+                  <div class="use-box yes"><strong>使う場面</strong>旧実験の再現、切出し単位を3構造にする比較、Othersがどう生成されたかの追跡。</div>
+                  <div class="use-box no"><strong>使わない場面</strong>論文の手法Bの学習・推論。Original→Structure_paddedの現行ルートには入らない。</div>
+                </div>
+              </div>
+            </article>
+
+            <article class="folder-dossier">
+              <div class="dossier-label archive"><div class="serial">D / ARCHIVE</div><h3>Others</h3><p>試行錯誤と改訂過程を残す開発アーカイブ</p></div>
+              <div class="dossier-body">
+                <div class="fact-grid">
+                  <div class="fact"><b>データ単位</b><span>Squared系の3構造を、<code>crop0</code>〜<code>crop2</code>の1構造単位に分解</span></div>
+                  <div class="fact"><b>Structure</b><span>Images 774 + Labels 774。初期の個別構造切出し</span></div>
+                  <div class="fact"><b>20250524Structure_padded</b><span>Images 774 + Labels 774。旧切出しの改訂版</span></div>
+                  <div class="fact"><b>命名例</b><span><code>Image_1_1_crop0.tif</code>、<code>Image_1_1_crop1.tif</code></span></div>
+                  <div class="fact"><b>参照切れ</b><span>旧CSVは<code>Image_Dataset/Structure</code>を指すが、実体は<code>Image_Dataset/Others/Structure</code></span></div>
+                  <div class="fact"><b>判断</b><span>削除はせず原本保管。作業用手法Bデータには混ぜない</span></div>
+                </div>
+                <div class="use-split">
+                  <div class="use-box yes"><strong>使う場面</strong>開発履歴の調査、Squared系の追試、切出し方法の新旧比較。</div>
+                  <div class="use-box no"><strong>使わない場面</strong>現行手法Bの学習・評価・推論。またパス修正なしで旧CSVを実行しない。</div>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <div class="scenario-lab" id="scenario-lab">
+            <h3>手法Bの必要フォルダ診断</h3>
+            <p class="scenario-note" id="scenario-note">「完全トレース」は、検出学習、切出し再生成、U-Net学習、正解比較までを含む。</p>
+            <div class="scenario-tabs" role="group" aria-label="手法Bの利用シナリオ">
+              <button type="button" class="scenario-tab active" data-scenario="trace">完全トレース</button>
+              <button type="button" class="scenario-tab" data-scenario="train">既存データで再学習</button>
+              <button type="button" class="scenario-tab" data-scenario="crop">切り出しを再生成</button>
+              <button type="button" class="scenario-tab" data-scenario="infer">学習済み重みで推論</button>
+            </div>
+            <div class="req-grid">
+              <div class="req-item" data-needed="trace train crop"><span class="req-mark">✓</span><div><div class="req-path">Image_Dataset/Original/Images</div><div class="req-why">全体SEM。Faster R-CNNの学習入力と切出し元。</div></div><span class="req-state">必要</span></div>
+              <div class="req-item" data-needed="trace crop"><span class="req-mark">✓</span><div><div class="req-path">Image_Dataset/Original/Labels</div><div class="req-why">切出しマスクを再生成する原本。正解比較にも使う。</div></div><span class="req-state">必要</span></div>
+              <div class="req-item" data-needed="trace train"><span class="req-mark">✓</span><div><div class="req-path">Image_Dataset/Structure_padded/Images</div><div class="req-why">構造単位U-Netの学習・テスト入力。</div></div><span class="req-state">必要</span></div>
+              <div class="req-item" data-needed="trace train"><span class="req-mark">✓</span><div><div class="req-path">Image_Dataset/Structure_padded/Labels</div><div class="req-why">構造単位U-Netの教師マスク。</div></div><span class="req-state">必要</span></div>
+              <div class="req-item" data-needed="trace train crop"><span class="req-mark">✓</span><div><div class="req-path">CSV_Data/Detection/Original</div><div class="req-why">全体SEMの分割、クラス、boxes、segpath。</div></div><span class="req-state">必要</span></div>
+              <div class="req-item" data-needed="trace train"><span class="req-mark">✓</span><div><div class="req-path">CSV_Data/Segmentation/Detected_padded</div><div class="req-why">切出しImages/Labelsの対応とtrain/val/test分割。</div></div><span class="req-state">必要</span></div>
+              <div class="req-item" data-needed="trace train crop infer"><span class="req-mark">✓</span><div><div class="req-path">Detection / Segmentation / End-To-End コード</div><div class="req-why">Datasetの外側にある学習・推論プログラム。</div></div><span class="req-state">必要</span></div>
+              <div class="req-item" data-needed="infer"><span class="req-mark">✓</span><div><div class="req-path">新規SEM画像 + Faster R-CNN/U-Net学習済み重み</div><div class="req-why">推論だけなら既存教師Labelsや学習CSVは不要。</div></div><span class="req-state">必要</span></div>
+            </div>
+            <div class="decision-strip">
+              <div><b>Original</b><span>必要。手法Bの入口と再生成元。</span></div>
+              <div><b>Structure_padded</b><span>再学習で必要。推論のみなら不要。</span></div>
+              <div><b>Squared</b><span>不要。旧実験を追う時だけ。</span></div>
+              <div><b>Others</b><span>不要。開発履歴として別保管。</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="purpose-index">
+        <div class="purpose-zone">
+          <span class="purpose-kicker">What it is for</span>
+          <h2 class="purpose-title">各ファイル・フォルダは「何に使うものか」</h2>
+          <p class="purpose-lead">ここではフォルダ名の説明ではなく、<strong>「どのモデルの、どの段階で、何のために使うか」</strong>を言い切る。ボタンで用途別に絞り込める。</p>
+
+          <div class="purpose-toolbar" role="group" aria-label="用途による絞り込み">
+            <button type="button" class="purpose-filter active" data-purpose-filter="all">すべて</button>
+            <button type="button" class="purpose-filter" data-purpose-filter="b">手法Bで使う</button>
+            <button type="button" class="purpose-filter" data-purpose-filter="a">手法Aで使う</button>
+            <button type="button" class="purpose-filter" data-purpose-filter="legacy">旧実験</button>
+            <button type="button" class="purpose-filter" data-purpose-filter="aux">補助・別版</button>
+          </div>
+
+          <div class="purpose-grid">
+            <article class="purpose-card" data-purpose="b a">
+              <div class="purpose-card-head"><span class="purpose-path">Original/Images</span><span class="purpose-kind">全体SEM</span></div>
+              <div class="purpose-sentence"><mark>手法BのFaster R-CNN重み学習用</mark>。手法Aでは全体U-Netの入力にも使う。</div>
+              <div class="purpose-why"><b>なぜ：</b>手法Bはセグメンテーションの前に、未加工のSEM上からエッチング構造の位置を見つける必要があるから。</div>
+              <div class="purpose-dependency">対応：<code>CSV_Data/Detection/Original/*.csv</code></div>
+            </article>
+
+            <article class="purpose-card" data-purpose="b a">
+              <div class="purpose-card-head"><span class="purpose-path">Original/Labels</span><span class="purpose-kind">全体マスク</span></div>
+              <div class="purpose-sentence"><mark>手法AのU-Net重み学習用</mark>。手法BではStructure_padded/Labelsを作る切り出し元に使う。</div>
+              <div class="purpose-why"><b>なぜ：</b>U-Netには各画素が基板か背景かを示す正解が必要である。手法B用切出しは、SEMと正解マスクに同じboxesを適用する。</div>
+              <div class="purpose-dependency">対応：<code>Segmentation/Original</code> / <code>Detection/Segmented</code></div>
+            </article>
+
+            <article class="purpose-card" data-purpose="b">
+              <div class="purpose-card-head"><span class="purpose-path">Structure_padded/Images</span><span class="purpose-kind">切出しSEM</span></div>
+              <div class="purpose-sentence"><mark>Structure_paddedは手法BのU-Net重み学習用</mark>であり、Imagesはその入力画像である。</div>
+              <div class="purpose-why"><b>なぜ：</b>検出済みの1構造に範囲を絞ると、遠い背景や他の構造に影響されにくく、構造境界の学習に集中できるから。</div>
+              <div class="purpose-dependency">対応：<code>Segmentation/Detected_padded/*.csv</code> の <code>imgpath</code></div>
+            </article>
+
+            <article class="purpose-card" data-purpose="b">
+              <div class="purpose-card-head"><span class="purpose-path">Structure_padded/Labels</span><span class="purpose-kind">切出しマスク</span></div>
+              <div class="purpose-sentence"><mark>手法BのU-Netが予測すべき正解を教えるため</mark>の教師データ。</div>
+              <div class="purpose-why"><b>なぜ：</b>Imagesと完全に同じ矩形で切り出すことで、入力画像の各画素と正解クラスを1対1で対応させられるから。</div>
+              <div class="purpose-dependency">対応：<code>Segmentation/Detected_padded/*.csv</code> の <code>labelpath</code></div>
+            </article>
+
+            <article class="purpose-card" data-purpose="b">
+              <div class="purpose-card-head"><span class="purpose-path">CSV_Data/Detection/Original</span><span class="purpose-kind">検出教師</span></div>
+              <div class="purpose-sentence"><mark>手法BのFaster R-CNN重み学習用</mark>の索引。画像パス、クラス、boxes、分割を与える。</div>
+              <div class="purpose-why"><b>なぜ：</b>Faster R-CNNは「その画像のどこに対象があるか」を矩形座標とクラスで学ぶため、TIFだけでは学習できないから。</div>
+              <div class="purpose-dependency">入力先：<code>Original/Images</code></div>
+            </article>
+
+            <article class="purpose-card" data-purpose="b">
+              <div class="purpose-card-head"><span class="purpose-path">CSV_Data/Segmentation/Detected_padded</span><span class="purpose-kind">U-Net索引</span></div>
+              <div class="purpose-sentence"><mark>手法BのU-Net重み学習用</mark>のImages/Labels対応表。</div>
+              <div class="purpose-why"><b>なぜ：</b>U-NetのDataLoaderが、どの切出しSEMとどの切出しマスクをペアにするか、どの集合で学習・選択・評価するかを知る必要があるから。</div>
+              <div class="purpose-dependency">入力先：<code>Structure_padded/Images</code> / <code>Labels</code></div>
+            </article>
+
+            <article class="purpose-card" data-purpose="a">
+              <div class="purpose-card-head"><span class="purpose-path">CSV_Data/Segmentation/Original</span><span class="purpose-kind">手法A用</span></div>
+              <div class="purpose-sentence"><mark>手法Aの全体U-Net重み学習用</mark>のImages/Labels対応表。</div>
+              <div class="purpose-why"><b>なぜ：</b>手法Aは物体検出より先に全体SEMを二値化する。高解像度を保つため、学習時は全体画像からランダムクロップする。</div>
+              <div class="purpose-dependency">入力先：<code>Original/Images</code> / <code>Labels</code></div>
+            </article>
+
+            <article class="purpose-card" data-purpose="a">
+              <div class="purpose-card-head"><span class="purpose-path">CSV_Data/Detection/Segmented</span><span class="purpose-kind">手法A用</span></div>
+              <div class="purpose-sentence"><mark>手法AのFaster R-CNN重み学習用</mark>。元SEMではなく二値マスクを入力する。</div>
+              <div class="purpose-why"><b>なぜ：</b>手法AではU-Netの出力後に構造の位置を検出するため、検出モデルも二値画像上の形状を学ぶ必要があるから。</div>
+              <div class="purpose-dependency"><code>imgpath</code>は<code>Original/Labels</code>を参照</div>
+            </article>
+
+            <article class="purpose-card" data-purpose="legacy">
+              <div class="purpose-card-head"><span class="purpose-path">Squared/Images + Labels</span><span class="purpose-kind">旧中間粒度</span></div>
+              <div class="purpose-sentence"><mark>3構造を1枚の正方形画像で扱う旧実験用</mark>。最終手法Bでは使わない。</div>
+              <div class="purpose-why"><b>なぜ作られたか：</b>全体画像と1構造切出しの中間の粒度で、計算量、周辺文脈、検出難易度のバランスを試すためと考えられる。</div>
+              <div class="purpose-dependency">対応：<code>Detection/Squared</code> / <code>Segmentation/Squared</code></div>
+            </article>
+
+            <article class="purpose-card" data-purpose="legacy">
+              <div class="purpose-card-head"><span class="purpose-path">Others/Structure</span><span class="purpose-kind">旧切出し</span></div>
+              <div class="purpose-sentence"><mark>Squared画像内の3構造を1個ずつに分解する旧U-Net実験用</mark>。</div>
+              <div class="purpose-why"><b>なぜ：</b>セグメンテーションを1構造単位で行う設計を、現行Structure_paddedより前のフローで試していたため。</div>
+              <div class="purpose-dependency">注意：対応旧CSVの現行パスは切れている</div>
+            </article>
+
+            <article class="purpose-card" data-purpose="legacy">
+              <div class="purpose-card-head"><span class="purpose-path">Others/20250524Structure_padded</span><span class="purpose-kind">旧改訂版</span></div>
+              <div class="purpose-sentence"><mark>旧Structureの余白・切出し条件を改訂した比較実験用</mark>。</div>
+              <div class="purpose-why"><b>なぜ：</b>切出しがタイトすぎると構造端が欠け、広すぎると不要背景が増えるため、切出し条件の改善を試す必要があった。</div>
+              <div class="purpose-dependency">現行手法Bの<code>Structure_padded</code>とは別系統</div>
+            </article>
+
+            <article class="purpose-card" data-purpose="aux">
+              <div class="purpose-card-head"><span class="purpose-path">Original/Labels_1 + Structure_padded/Labels_1</span><span class="purpose-kind">別版教師</span></div>
+              <div class="purpose-sentence"><mark>テストラベルの別版と比較するため</mark>の補助データ。</div>
+              <div class="purpose-why"><b>なぜ：</b>アノテーション修正や評価基準の変更後に、旧版と新版の結果を切り分けて比較するためと考えられる。</div>
+              <div class="purpose-dependency">通常の手法Bトレースでは不要</div>
+            </article>
+          </div>
+
+          <h3 style="margin-top:30px">各CSVファイルの役割</h3>
+          <div class="purpose-table-wrap">
+            <table class="purpose-table">
+              <thead><tr><th>場所</th><th>ファイル</th><th>何に使うか</th><th>なぜ分けるか</th><th>対象</th></tr></thead>
+              <tbody>
+                <tr class="core"><td><code>Detection/Original</code></td><td><code>train.csv</code></td><td>Faster R-CNNの重み更新</td><td>正解boxesを教える学習集合だから</td><td><span class="role-pill b">手法B</span></td></tr>
+                <tr class="core"><td><code>Detection/Original</code></td><td><code>val.csv</code></td><td>学習中の検出性能監視・エポック選択</td><td>trainだけの損失で選ぶと過学習を見抜けないから</td><td><span class="role-pill b">手法B</span></td></tr>
+                <tr class="core"><td><code>Detection/Original</code></td><td><code>test.csv</code></td><td>学習後の誤検出・未検出の最終評価</td><td>モデル選択に使っていない未知集合で測るため</td><td><span class="role-pill b">手法B</span></td></tr>
+                <tr class="core"><td><code>Segmentation/Detected_padded</code></td><td><code>train.csv</code></td><td>U-Netの重み更新</td><td>切出しSEMと切出し正解マスクを対応させるため</td><td><span class="role-pill b">手法B</span></td></tr>
+                <tr class="core"><td><code>Segmentation/Detected_padded</code></td><td><code>val.csv</code></td><td>U-Netの検証損失監視・重み選択</td><td>教師への暗記ではなく汎化を確かめるため</td><td><span class="role-pill b">手法B</span></td></tr>
+                <tr class="core"><td><code>Segmentation/Detected_padded</code></td><td><code>test.csv</code></td><td>U-Netの最終マスク精度と寸法誤差評価</td><td>学習・選択から独立したデータで報告値を出すため</td><td><span class="role-pill b">手法B</span></td></tr>
+                <tr><td><code>Segmentation/Original</code></td><td><code>train/val/test.csv</code></td><td>全体U-Netの学習・選択・評価</td><td>手法Aは最初に全体SEMを二値化するから</td><td><span class="role-pill">手法A</span></td></tr>
+                <tr><td><code>Detection/Segmented</code></td><td><code>train/val/test.csv</code></td><td>二値画像上のFaster R-CNN学習・評価</td><td>手法Aではセグメンテーションの後に物体検出するから</td><td><span class="role-pill">手法A</span></td></tr>
+                <tr class="legacy-row"><td><code>*/Squared</code></td><td><code>train/val/test.csv</code></td><td>3構造・正方形系の旧学習・評価</td><td>現行手法と異なる粒度の比較用だから</td><td><span class="role-pill old">旧実験</span></td></tr>
+                <tr class="legacy-row"><td><code>Segmentation/Detected</code><br><code>Segmentation/Others</code></td><td><code>train/val/test.csv</code></td><td>旧切出しU-Net実験</td><td>開発履歴の再現用。参照パス修正が必要</td><td><span class="role-pill old">要修正</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="sentence-template"><b>手法Bの最短要約：</b><br><span>Original/Images</span> でFaster R-CNNを学習 → <span>Detection/Original CSV</span> がboxesを教える → <span>Structure_padded/Images</span> でU-Netを学習 → <span>Structure_padded/Labels</span> が正解を教える → <span>Segmentation/Detected_padded CSV</span> がペアと分割を管理。</div>
+        </div>
+      </section>
+
+      <section id="v20250515">
+        <h2>4. <code>20250515</code> 系：GaN主実験</h2>
+        <p class="lead">論文の91枚のGaNトレンチ画像を用いた比較に最も近いデータ系。ただし現物CSVは92枚を参照し、論文記載（75/8/8=91）と1枚の差がある。</p>
+        <div class="grid g2">
+          <div class="card">
+            <h3>Originalの役割</h3>
+            <p><code>Images/Image_N.tif</code> と <code>Labels/Label_N.tif</code> がペア。</p>
+            <div class="file-anatomy">
+              <div class="chunk"><b>Image</b>入力</div><div class="chunk"><b>_90</b>画像ID</div><div class="chunk"><b>.tif</b>非可逆</div><div class="chunk"><b>⇄ Label_90</b>正解</div>
+            </div>
+            <p class="small">物体検出ではこの画像1枚に対して5個のボックスが付く。</p>
+          </div>
+          <div class="card">
+            <h3>分割</h3>
+            <div class="bar-row"><span>train</span><div class="bar"><i style="width:81.5%"></i></div><b>75</b></div>
+            <div class="bar-row"><span>validation</span><div class="bar"><i style="width:8.7%"></i></div><b>8</b></div>
+            <div class="bar-row"><span>test</span><div class="bar"><i style="width:9.8%"></i></div><b>9</b></div>
+            <p class="small">train / val / test間で、CSVのID重複はない。</p>
+          </div>
+        </div>
+        <h3>主要フォルダ対応表</h3>
+        <div class="table-scroll"><table>
+          <thead><tr><th>フォルダ</th><th>中身</th><th>件数</th><th>利用者</th><th>位置付け</th></tr></thead>
+          <tbody>
+            <tr><td><code>Image_Dataset/Original/Images</code></td><td>元SEM</td><td>100</td><td>Detection/Original, Segmentation/Original</td><td><span class="tag t-green">現役</span></td></tr>
+            <tr><td><code>Image_Dataset/Original/Labels</code></td><td>全体二値マスク</td><td>98</td><td>Segmentation/Original, Detection/Segmented</td><td><span class="tag t-green">現役</span></td></tr>
+            <tr><td><code>Image_Dataset/Structure_padded/Images</code></td><td>1構造ずつのSEM</td><td>460</td><td>Segmentation/Detected_padded</td><td><span class="tag t-green">手法B</span></td></tr>
+            <tr><td><code>Image_Dataset/Structure_padded/Labels</code></td><td>各構造の二値マスク</td><td>460</td><td>Segmentation/Detected_padded</td><td><span class="tag t-green">手法B</span></td></tr>
+            <tr><td><code>Image_Dataset/Squared</code></td><td>3構造単位の正方形系</td><td>258ペア</td><td>Squared系CSV</td><td><span class="tag t-amber">旧実験</span></td></tr>
+            <tr><td><code>Image_Dataset/Others/*</code></td><td>crop0〜crop2を含む旧切出し</td><td>774ペア×2</td><td>Detected系旧CSV</td><td><span class="tag t-amber">保管物</span></td></tr>
+          </tbody>
+        </table></div>
+        <div class="callout"><strong>460の内訳</strong><br>
+          CSV上は train 375 + val 40 + test 45 = 460。原則として元画像1枚から5構造を切り出すため、75×5、8×5、9×5と一致する。これが手法BのU-Net学習セットである。
+        </div>
+      </section>
+
+      <section id="v20260118">
+        <h2>5. <code>20260118 ..._7</code> 系：汎用性検証</h2>
+        <p class="lead">元画像15枚、切出し構造163個。各元画像に9〜12個の検出対象があり、主実験の「常に5個」とは異なる。</p>
+        <div class="diagram">
+          <svg viewBox="0 0 980 290" role="img" aria-label="_7データの分割図">
+            <defs><marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#64748b"/></marker></defs>
+            <rect x="22" y="92" width="160" height="100" rx="16" fill="#eaf2ff" stroke="#2563eb"/><text x="102" y="128" text-anchor="middle" font-size="16" font-weight="700" fill="#1e40af">Original 15枚</text><text x="102" y="158" text-anchor="middle" font-size="13" fill="#475569">Images + Labels</text>
+            <line x1="182" y1="142" x2="264" y2="142" stroke="#64748b" stroke-width="2" marker-end="url(#ah)"/>
+            <rect x="270" y="38" width="240" height="92" rx="16" fill="#ecfdf3" stroke="#16a34a"/><text x="390" y="72" text-anchor="middle" font-size="16" font-weight="700" fill="#166534">train: 9枚 / 97構造</text><text x="390" y="100" text-anchor="middle" font-size="13" fill="#475569">学習用</text>
+            <rect x="270" y="158" width="240" height="92" rx="16" fill="#fff5dd" stroke="#f59e0b"/><text x="390" y="192" text-anchor="middle" font-size="16" font-weight="700" fill="#92400e">evaluation: 6枚 / 66構造</text><text x="390" y="220" text-anchor="middle" font-size="13" fill="#475569">val = test の同一集合</text>
+            <line x1="510" y1="84" x2="585" y2="84" stroke="#64748b" stroke-width="2" marker-end="url(#ah)"/><line x1="510" y1="204" x2="585" y2="204" stroke="#64748b" stroke-width="2" marker-end="url(#ah)"/>
+            <rect x="592" y="38" width="360" height="212" rx="16" fill="#f8fafc" stroke="#cbd5e1"/>
+            <text x="772" y="73" text-anchor="middle" font-size="16" font-weight="700" fill="#172033">4系統のCSVが同じ分割を共有</text>
+            <text x="620" y="108" font-size="14" fill="#334155">• Segmentation / Original</text><text x="620" y="139" font-size="14" fill="#334155">• Segmentation / Detected_padded</text><text x="620" y="170" font-size="14" fill="#334155">• Detection / Original</text><text x="620" y="201" font-size="14" fill="#334155">• Detection / Segmented</text>
+          </svg>
+        </div>
+        <div class="callout warn"><strong><code>val.csv</code> と <code>test.csv</code> は完全に同じ</strong><br>
+          _7の4系統すべてで、valの6画像/66構造とtestの6画像/66構造はIDもパスも同一。論文の汎用性検証で「検証データによるハイパーパラメータ調整を行っていない」ことと整合し、コード上val入力が必要なためtestを複製した可能性が高い。新規学習では独立valとみなさない。
+        </div>
+        <div class="grid g3">
+          <div class="card"><h3>Original</h3><div class="metric">15 + 15</div><p>SEM画像15枚と全体マスク15枚。ペア欠落なし。</p></div>
+          <div class="card"><h3>Structure_padded</h3><div class="metric">163 + 163</div><p>切出しSEM 163枚と切出しマスク163枚。ペア欠落なし。</p></div>
+          <div class="card"><h3>boxed_vis</h3><div class="metric">15 PNG</div><p>ボックス座標の確認用可視化出力と推定。学習入力ではない。</p></div>
+        </div>
+      </section>
+
+      <section id="csv">
+        <h2>6. CSVの読み方</h2>
+        <h3>6.1 セグメンテーション用</h3>
+        <div class="table-scroll"><table>
+          <thead><tr><th>列</th><th>例</th><th>意味</th><th>実行時の役割</th></tr></thead>
+          <tbody>
+            <tr><td><code>id</code></td><td><code>90_0</code></td><td>サンプル識別子。<code>90</code> は元画像、<code>_0</code> は構造番号。</td><td>結果と元データの紐付け。</td></tr>
+            <tr><td><code>imgpath</code></td><td><code>../../Dataset/.../Images/Image_90_0.tif</code></td><td>入力SEM画像の相対パス。</td><td>OpenCV/PILで読む。</td></tr>
+            <tr><td><code>labelpath</code></td><td><code>../../Dataset/.../Labels/Label_90_0.tif</code></td><td>正解二値マスクのパス。</td><td>損失計算の教師。</td></tr>
+            <tr><td><code>width</code></td><td><code>212</code></td><td>画像の横幅px。</td><td>サイズ確認、リサイズ前情報。</td></tr>
+            <tr><td><code>height</code></td><td><code>552</code></td><td>画像の高さpx。</td><td>同上。</td></tr>
+            <tr><td><code>label</code></td><td><code>1</code></td><td>対象クラス。全行1。</td><td>単一クラスの管理列。</td></tr>
+          </tbody>
+        </table></div>
+        <h3>6.2 物体検出用</h3>
+        <div class="table-scroll"><table>
+          <thead><tr><th>列</th><th>例</th><th>意味</th><th>重要ルール</th></tr></thead>
+          <tbody>
+            <tr><td><code>id</code></td><td><code>90</code></td><td>元画像の識別子。</td><td>一意であることが望ましい。</td></tr>
+            <tr><td><code>imgpath</code></td><td>ImagesまたはLabelsへのパス</td><td>手法BはSEM、手法Aは二値マスク。</td><td>この違いがOriginal / Segmentedの本質。</td></tr>
+            <tr><td><code>labels</code></td><td><code>[1,1,1,1,1]</code></td><td>各ボックスのクラスID。</td><td><code>boxes</code> と同じ長さが必要。</td></tr>
+            <tr><td><code>boxes</code></td><td><code>[[99,106,311,658], ...]</code></td><td>各構造の矩形座標。</td><td>概念上 <code>[x_min,y_min,x_max,y_max]</code>。</td></tr>
+            <tr><td><code>segpath</code></td><td>Labelsへのパス</td><td>対応する全体二値マスク。</td><td>切出しラベル作成や統合処理に使える。</td></tr>
+          </tbody>
+        </table></div>
+        <div class="diagram" style="margin-top:18px">
+          <svg viewBox="0 0 1000 285" role="img" aria-label="ボックス座標の説明">
+            <rect x="30" y="35" width="500" height="210" rx="12" fill="#edf2f7" stroke="#94a3b8"/>
+            <text x="280" y="63" text-anchor="middle" font-size="14" fill="#64748b">SEM画像の座標系（左上原点）</text>
+            <circle cx="30" cy="35" r="6" fill="#e11d48"/><text x="45" y="29" font-size="13" fill="#be123c">(0,0)</text>
+            <rect x="145" y="88" width="118" height="112" fill="#dbeafe" stroke="#2563eb" stroke-width="3"/>
+            <line x1="145" y1="88" x2="263" y2="200" stroke="#60a5fa" stroke-dasharray="6 5"/>
+            <circle cx="145" cy="88" r="6" fill="#2563eb"/><circle cx="263" cy="200" r="6" fill="#2563eb"/>
+            <text x="105" y="84" font-size="13" fill="#1d4ed8">(x_min, y_min)</text><text x="270" y="217" font-size="13" fill="#1d4ed8">(x_max, y_max)</text>
+            <text x="624" y="86" font-size="17" font-weight="700" fill="#172033">[145, 88, 263, 200]</text>
+            <text x="624" y="122" font-size="14" fill="#475569">xは右向きに増加</text><text x="624" y="150" font-size="14" fill="#475569">yは下向きに増加</text>
+            <text x="624" y="190" font-size="14" fill="#475569">必須: x_min &lt; x_max</text><text x="624" y="218" font-size="14" fill="#475569">必須: y_min &lt; y_max</text>
+          </svg>
+        </div>
+      </section>
+
+      <section id="pipelines">
+        <h2>7. 手法A / Bと、読まれるフォルダ</h2>
+        <div class="grid g2">
+          <div class="card" style="border-top:5px solid var(--violet)">
+            <span class="tag t-violet">手法A</span><h3>セグメンテーション先行</h3>
+            <div class="flow" style="flex-direction:column">
+              <div class="step"><strong>1. 全体SEM + 全体Label</strong><code>Segmentation/Original</code></div><div class="arrow">↓</div>
+              <div class="step"><strong>2. U-Net</strong>全体画像を二値化</div><div class="arrow">↓</div>
+              <div class="step"><strong>3. 二値マスク + boxes</strong><code>Detection/Segmented</code></div><div class="arrow">↓</div>
+              <div class="step"><strong>4. Faster R-CNN</strong>二値画像上で構造検出</div>
+            </div>
+            <p class="small">論文ではU-Net学習時に512×512のランダムクロップを使う。A'は縦長クロップに変えた検証。</p>
+          </div>
+          <div class="card" style="border-top:5px solid var(--teal)">
+            <span class="tag t-green">手法B / 推奨</span><h3>物体検出先行</h3>
+            <div class="flow" style="flex-direction:column">
+              <div class="step"><strong>1. 全体SEM + boxes</strong><code>Detection/Original</code></div><div class="arrow">↓</div>
+              <div class="step"><strong>2. Faster R-CNN</strong>構造を矩形で検出</div><div class="arrow">↓</div>
+              <div class="step"><strong>3. 切出しSEM + 切出しLabel</strong><code>Segmentation/Detected_padded</code></div><div class="arrow">↓</div>
+              <div class="step"><strong>4. U-Net</strong>構造ごとに二値化</div>
+            </div>
+            <p class="small">操作マニュアルが主に説明する運用形。論文で検出安定性が最も高かった。</p>
+          </div>
+        </div>
+        <div class="table-scroll" style="margin-top:20px"><table>
+          <thead><tr><th>学習するモデル</th><th>手法AのCSV</th><th>手法BのCSV</th><th>教師の種類</th></tr></thead>
+          <tbody>
+            <tr><td>U-Net</td><td><code>Segmentation/Original</code></td><td><code>Segmentation/Detected_padded</code></td><td>入力画像と同サイズの二値マスク</td></tr>
+            <tr><td>Faster R-CNN</td><td><code>Detection/Segmented</code></td><td><code>Detection/Original</code></td><td>クラスID配列 + 矩形座標配列</td></tr>
+          </tbody>
+        </table></div>
+      </section>
+
+      <section id="lineage">
+        <h2>8. 一枚の元画像から学習データができるまで</h2>
+        <div class="diagram">
+          <svg viewBox="0 0 1120 470" role="img" aria-label="データリネージ">
+            <defs><marker id="arr2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#64748b"/></marker></defs>
+            <rect x="25" y="155" width="185" height="120" rx="16" fill="#eaf2ff" stroke="#2563eb"/><text x="117" y="191" text-anchor="middle" font-size="15" font-weight="700">Image_90.tif</text><text x="117" y="220" text-anchor="middle" font-size="13" fill="#475569">全体SEM</text><text x="117" y="248" text-anchor="middle" font-size="12" fill="#64748b">1枚に5構造</text>
+            <line x1="210" y1="215" x2="288" y2="215" stroke="#64748b" stroke-width="2" marker-end="url(#arr2)"/>
+            <rect x="295" y="70" width="220" height="110" rx="16" fill="#fff5dd" stroke="#f59e0b"/><text x="405" y="104" text-anchor="middle" font-size="15" font-weight="700">Detection CSV</text><text x="405" y="133" text-anchor="middle" font-size="12" fill="#475569">labels=[1,1,1,1,1]</text><text x="405" y="158" text-anchor="middle" font-size="12" fill="#475569">boxes=5個</text>
+            <rect x="295" y="255" width="220" height="110" rx="16" fill="#f2ecff" stroke="#7c3aed"/><text x="405" y="289" text-anchor="middle" font-size="15" font-weight="700">Label_90.tif</text><text x="405" y="318" text-anchor="middle" font-size="12" fill="#475569">全体二値マスク</text>
+            <line x1="515" y1="125" x2="625" y2="183" stroke="#64748b" stroke-width="2" marker-end="url(#arr2)"/><line x1="515" y1="310" x2="625" y2="245" stroke="#64748b" stroke-width="2" marker-end="url(#arr2)"/>
+            <rect x="635" y="155" width="195" height="120" rx="16" fill="#e7f7f4" stroke="#0f766e"/><text x="732" y="190" text-anchor="middle" font-size="15" font-weight="700">同じboxesで切出し</text><text x="732" y="219" text-anchor="middle" font-size="12" fill="#475569">SEMとLabelに</text><text x="732" y="244" text-anchor="middle" font-size="12" fill="#475569">同一矩形を適用</text>
+            <line x1="830" y1="215" x2="900" y2="215" stroke="#64748b" stroke-width="2" marker-end="url(#arr2)"/>
+            <rect x="910" y="52" width="185" height="75" rx="13" fill="#fff" stroke="#2563eb"/><text x="1002" y="83" text-anchor="middle" font-size="13" font-weight="700">Image_90_0.tif</text><text x="1002" y="106" text-anchor="middle" font-size="11" fill="#64748b">切出しSEM #0</text>
+            <rect x="910" y="145" width="185" height="75" rx="13" fill="#fff" stroke="#2563eb"/><text x="1002" y="176" text-anchor="middle" font-size="13" font-weight="700">Image_90_1.tif</text><text x="1002" y="199" text-anchor="middle" font-size="11" fill="#64748b">切出しSEM #1</text>
+            <rect x="910" y="238" width="185" height="75" rx="13" fill="#fff" stroke="#7c3aed"/><text x="1002" y="269" text-anchor="middle" font-size="13" font-weight="700">Label_90_0.tif</text><text x="1002" y="292" text-anchor="middle" font-size="11" fill="#64748b">切出しLabel #0</text>
+            <rect x="910" y="331" width="185" height="75" rx="13" fill="#fff" stroke="#7c3aed"/><text x="1002" y="362" text-anchor="middle" font-size="13" font-weight="700">Label_90_1.tif</text><text x="1002" y="385" text-anchor="middle" font-size="11" fill="#64748b">… #4まで</text>
+            <text x="25" y="438" font-size="13" fill="#475569">重要：切出しペアの生成には「元SEM」「元Label」「boxes」の3つが必要。</text>
+          </svg>
+        </div>
+        <div class="callout ok"><strong>追跡性の鍵はファイル名</strong><br>
+          <code>Image_90.tif</code> → <code>Image_90_0.tif</code> 〜 <code>Image_90_4.tif</code> のように、元IDと構造番号が派生先に残る。再構築時にもこの命名規則を維持する。
+        </div>
+      </section>
+
+      <section id="audit">
+        <h2>9. 整合性監査で分かったこと</h2>
+        <div class="grid g2">
+          <div class="card"><span class="tag t-green">PASS</span><h3>参照が全部実在</h3><p><code>20250515</code> のOriginal / Structure_padded / Squared系、および <code>20260118 ..._7</code> の主要CSVは、参照するImages / Labelsが実在する。</p></div>
+          <div class="card"><span class="tag t-green">PASS</span><h3>ボックス形式は正常</h3><p>全Detection CSVで <code>labels</code> と <code>boxes</code> の個数が一致し、各座標は <code>x1&lt;x2</code> / <code>y1&lt;y2</code> を満たす。</p></div>
+          <div class="card"><span class="tag t-rose">BROKEN</span><h3>旧Detected CSVは参照切れ</h3><p><code>20250515 CSV_Data/Segmentation/Detected</code> は存在しない <code>Image_Dataset/Structure</code> を参照。0/1,548パスが解決できない。</p></div>
+          <div class="card"><span class="tag t-rose">BROKEN</span><h3>Others CSVも参照切れ</h3><p><code>Segmentation/Others/20250524Detected_padded</code> は実ファイルの置き場所とパスが一致しない。0/1,548パス。</p></div>
+        </div>
+        <h3>注意事項の優先度</h3>
+        <div class="table-scroll"><table>
+          <thead><tr><th>優先度</th><th>事実</th><th>リスク</th><th>再構築時の対応</th></tr></thead>
+          <tbody>
+            <tr><td><span class="tag t-rose">高</span></td><td>マニュアル記載の <code>_8</code> がない。</td><td>配布版と完全に同じ条件を再現できない。</td><td>別ストレージ、野島さんの共有先、アーカイブを探す。</td></tr>
+            <tr><td><span class="tag t-rose">高</span></td><td>_7のval=test。</td><td>valでモデル選択するとtest情報が漏洩する。</td><td>論文の追試ではそのまま、新規実験では独立分割。</td></tr>
+            <tr><td><span class="tag t-amber">中</span></td><td>_7 train.csvの <code>id=14</code> が2回。</td><td>IDだけで結果を保存すると上書きの可能性。</td><td>ファイル名を主キーにするか、IDを付け直す。</td></tr>
+            <tr><td><span class="tag t-amber">中</span></td><td>20250515 CSVは92枚、論文は91枚。</td><td>論文の数値と追試結果が一致しない可能性。</td><td>最終学習スクリプトと実際に読んだCSV版を照合。</td></tr>
+            <tr><td><span class="tag t-blue">低</span></td><td>macOSメタデータ <code>._*</code> / <code>.DS_Store</code> が多い。</td><td>単純globで誤って読む可能性。</td><td>CSV駆動で読む。glob時は除外する。</td></tr>
+          </tbody>
+        </table></div>
+        <details><summary>主実験の未使用元画像</summary><div>
+          Original/Imagesには100枚あるが、Original CSVが使うのは92枚。未使用は <code>Image_16.tif</code>, <code>Image_18.tif</code>, <code>Image_28.tif</code>, <code>Image_40.tif</code>, <code>Image_49.tif</code>, <code>Image_86.tif</code>, <code>Image_99.tif</code>, <code>Image_100.tif</code>。このうち99と100は対応Labelもない。
+        </div></details>
+      </section>
+
+      <section id="rebuild">
+        <h2>10. 自分の環境に構築するときの推奨形</h2>
+        <p class="lead">元データは不変の原本として保存し、作業用データは別フォルダに複製する。参照切れや旧版混入を避けるため、初回トレースでは手法Bに必要な4組だけを抽出するのが安全である。</p>
+        <div class="tree">nojima-reproduction/
+├── README.md                         ← 出典、版、作業日、変更履歴
+├── data/
+│   ├── raw/                          ← 原本の読取専用複製
+│   │   ├── images/
+│   │   └── masks/
+│   ├── detection/
+│   │   ├── train.csv
+│   │   ├── val.csv
+│   │   └── test.csv
+│   └── segmentation/
+│       ├── images/                 ← 構造ごとの切出し
+│       ├── masks/
+│       ├── train.csv
+│       ├── val.csv
+│       └── test.csv
+├── src/
+│   ├── prepare_data/                  ← CSV生成・切出し・監査
+│   ├── detection/                     ← Faster R-CNN
+│   ├── segmentation/                  ← U-Net
+│   └── inference/                     ← End-to-End
+├── configs/                             ← パスとハイパーパラメータ
+├── outputs/                             ← 重み・ログ・推論結果
+└── checks/                              ← 整合性レポート</div>
+        <h3>再構築のゲート</h3>
+        <ul class="checklist">
+          <li><strong>版を固定：</strong> 論文の主実験を追試するか、マニュアルの最終配布版を再現するかを分ける。</li>
+          <li><strong>原本を保存：</strong> ネットワークボリューム上のDatasetを直接書き換えない。</li>
+          <li><strong>CSVパスを統一：</strong> <code>../../Dataset/...</code> を、構築先のルートから解決できるようにする。</li>
+          <li><strong>ペアを検査：</strong> ImagesとLabelsのキー集合が一致することを学習前に自動確認する。</li>
+          <li><strong>分割を検査：</strong> train / val / testの元画像IDが交差しないことを確認する。</li>
+          <li><strong>ボックスを検査：</strong> 画像範囲内、正の面積、labelsと個数一致を確認する。</li>
+          <li><strong>実験単位で分割：</strong> 切出し画像をランダム分割せず、必ず元SEM画像単位で分ける。</li>
+        </ul>
+        <div class="callout danger"><strong>データ漏洩の典型例</strong><br>
+          <code>Image_90_0</code> をtrain、<code>Image_90_1</code> をtestに入れると、同じ元SEM画像の特徴が両方に入る。分割は必ず切出し前の <code>90</code> 単位で行う。
+        </div>
+      </section>
+
+      <section id="next">
+        <h2>11. この後の推奨順序</h2>
+        <div class="flow">
+          <div class="step"><div class="icon">1</div><strong>Dataset固定</strong><span class="small">_8の所在を確認し、追試対象版を決定。</span></div><div class="arrow">→</div>
+          <div class="step"><div class="icon">2</div><strong>Detection</strong><span class="small">Original CSVでFaster R-CNN学習。</span></div><div class="arrow">→</div>
+          <div class="step"><div class="icon">3</div><strong>切出し</strong><span class="small">boxesからStructure_paddedを再生成し照合。</span></div><div class="arrow">→</div>
+          <div class="step"><div class="icon">4</div><strong>Segmentation</strong><span class="small">Detected_padded CSVでU-Net学習。</span></div><div class="arrow">→</div>
+          <div class="step"><div class="icon">5</div><strong>End-to-End</strong><span class="small">検出→切出し→二値化→形状評価。</span></div>
+        </div>
+        <div class="callout ok"><strong>現時点の到達点</strong><br>
+          Dataset内の役割とデータ系譜は追跡できた。次に行うべきは、最終学習コードとCSVパスの1対1対応を確定し、データを変更せずに事前検査スクリプトを作ることである。
+        </div>
+      </section>
+
+      <footer>
+        <p><strong>調査対象：</strong><span class="mono">/Volumes/met-info/Research Progress/Mukoyama/Model_backup/Docker/Dataset</span></p>
+        <p><strong>根拠：</strong>実ディレクトリ・ファイル名・件数、CSVの列・行・参照先、『モデル操作マニュアル.docx』、『修士論文_野島_Final.pdf』。</p>
+        <p><strong>非実施：</strong>TIFF/PNGの画像内容の閲覧、モデル学習、元データの変更。</p>
+      </footer>
+    </div>
+  </main>
+</div>
+<script>
+  function closeDatasetTree(){
+    document.querySelectorAll('#dataset-explorer details[open]').forEach(function(node){node.open=false;});
+    document.getElementById('dataset-explorer').scrollIntoView({behavior:'smooth',block:'start'});
+  }
+  const scenarioCopy={
+    trace:'「完全トレース」は、検出学習、切出し再生成、U-Net学習、正解比較までを含む。',
+    train:'既存のStructure_paddedを信頼して再学習する場合。切出し工程そのもは再実行しない。',
+    crop:'OriginalとDetection CSVのboxesから、Structure_paddedのImages/Labelsを作り直す場合。',
+    infer:'学習済み重みを使い、新規SEM画像を評価するだけの場合。既存Datasetの教師は不要。'
+  };
+  function setScenario(name){
+    document.querySelectorAll('.scenario-tab').forEach(function(button){button.classList.toggle('active',button.dataset.scenario===name);});
+    document.querySelectorAll('.req-item').forEach(function(item){
+      const needed=item.dataset.needed.split(' ').includes(name);
+      item.classList.toggle('off',!needed);
+      item.querySelector('.req-mark').textContent=needed?'✓':'—';
+      item.querySelector('.req-state').textContent=needed?'必要':'不要';
+    });
+    document.getElementById('scenario-note').textContent=scenarioCopy[name];
+  }
+  document.querySelectorAll('.scenario-tab').forEach(function(button){button.addEventListener('click',function(){setScenario(button.dataset.scenario);});});
+  setScenario('trace');
+  function filterPurpose(name){
+    document.querySelectorAll('.purpose-filter').forEach(function(button){button.classList.toggle('active',button.dataset.purposeFilter===name);});
+    document.querySelectorAll('.purpose-card').forEach(function(card){
+      const groups=card.dataset.purpose.split(' ');
+      card.classList.toggle('hidden',name!=='all'&&!groups.includes(name));
+    });
+  }
+  document.querySelectorAll('.purpose-filter').forEach(function(button){button.addEventListener('click',function(){filterPurpose(button.dataset.purposeFilter);});});
+</script>
+</body>
+</html>
