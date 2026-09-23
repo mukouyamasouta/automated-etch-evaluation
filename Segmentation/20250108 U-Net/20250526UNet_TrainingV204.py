@@ -28,6 +28,11 @@ IMAGE_SIZE = (256,256)
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPOSITORY_ROOT = SCRIPT_DIR.parents[1]
 CSV_DIR = REPOSITORY_ROOT / "Dataset" / "20260925 CSV_Data" / "Segmentation"
+
+def resolve_data_path(path_value):
+    """CSVの相対パスを、このスクリプトの配置場所を基準に解決する。"""
+    path = Path(path_value)
+    return str(path if path.is_absolute() else (SCRIPT_DIR / path).resolve())
 AUGMENTATION = True
 NUM_WORKERS = 4
 PIN_MEMORY = True
@@ -64,6 +69,10 @@ test_file = CSV_DIR / dataset_kind / "test.csv"
 train_df = pd.read_csv(train_file)
 val_df = pd.read_csv(val_file)
 test_df = pd.read_csv(test_file)
+
+for dataframe in (train_df, val_df, test_df):
+    for column in ("imgpath", "labelpath"):
+        dataframe[column] = dataframe[column].map(resolve_data_path)
 
 # %% データ前処理
 class Dataset(BaseDataset):

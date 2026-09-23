@@ -16,7 +16,6 @@ Dataset/
 
 # Historical compressed backups remain on the volume and are not versioned.
 *.7z
-End-To-End/
 
 # Local notebooks and experiment scratch files
 .ipynb_checkpoints/

@@ -26,6 +26,11 @@ IMAGE_SIZE = None
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPOSITORY_ROOT = SCRIPT_DIR.parents[1]
 CSV_DIR = REPOSITORY_ROOT / "Dataset" / "20260925 CSV_Data" / "Detection"
+
+def resolve_data_path(path_value):
+    """CSVの相対パスを、このスクリプトの配置場所を基準に解決する。"""
+    path = Path(path_value)
+    return str(path if path.is_absolute() else (SCRIPT_DIR / path).resolve())
 # ハイパーパラメータ
 EPOCH_NUMBER = 30
 BATCH_SIZE = 8
@@ -55,7 +60,7 @@ def read_df(csv_file):
     with open(csv_file, mode='r', encoding='utf-8') as file:
         csv_reader = csv.DictReader(file)
         for row in csv_reader:
-            imgpath = row['imgpath']
+            imgpath = resolve_data_path(row['imgpath'])
             boxes = ast.literal_eval(row['boxes'])
             labels = ast.literal_eval(row['labels'])
             dataset.append({

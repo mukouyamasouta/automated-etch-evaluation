@@ -6,6 +6,7 @@
 |---|---|---|---|
 | `Detection/20250208 Faster R-CNN/20250525FasterRCNN_TrainingV163.py` | 同名の`.py.7z` | 全体SEMから5個の構造を検出するFaster R-CNNの学習・検証・テスト | 手法BのEnd-To-End実験で`Det163`として参照される基準版 |
 | `Segmentation/20250108 U-Net/20250526UNet_TrainingV204.py` | 同名の`.py.7z` | `Structure_padded`を用いた構造単位U-Netの学習・検証・テスト | 手法BのEnd-To-End実験で`Seg204`として参照される基準版 |
+| `End-To-End/20260925 U-Net--Faster R-CNN/20250526EndToEnd_Seg204_Det163_1.py` | 同名の`.py.7z` | Det163による検出、構造切出し、Seg204による二値化、寸法計測、正解比較 | 現在のGaN主DatasetとDet163/Seg204を組み合わせた基準版 |
 
 ## コピーしなかったもの
 
@@ -19,7 +20,11 @@
 
 ## `.py`だけでよいか
 
-バックアップから移す対象は、この段階では上記2本の`.py`だけで足ります。ただし実験全体としては、別途Dataset、Python依存パッケージ、計算環境が必要です。また、学習後に新規SEMを手法Bで一括処理するには、選定したDet163/Seg204の重みとEnd-To-End推論コードが必要です。End-To-Endは学習結果を確認してから別途1版に絞って管理します。
+バックアップから移す対象は、2本の学習用`.py`と1本のEnd-To-End用`.py`で足ります。ただし実験全体としては、別途Dataset、Python依存パッケージ、計算環境、学習によって作成するDet163/Seg204の重みが必要です。
+
+## End-To-Endフォルダの整理
+
+`20260925 U-Net--Faster R-CNN`にあった301個の`.7z`と、別モデル出力専用の`count_classification.py`は削除対象としました。後続のSeg204/Det163コードは`20250701`以降の別Dataset向けであり、現在のGaN主Datasetをトレースする基準コードには採用していません。削除した履歴の原本は`Model_backup`に残っています。
 
 ## 元データの保持方針
 
