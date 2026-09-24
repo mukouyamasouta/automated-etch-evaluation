@@ -25,8 +25,8 @@ Detection/20250208 Faster R-CNN/
 
 | ID | 設定項目 | 元コード | Mac用 | 変更理由 | 結果への影響 |
 |---|---|---:|---:|---|---|
-| `MAC-01` | バージョン名 | `163` | `163_local_mac` | 本実験の重み・出力を上書きしない | 精度への影響なし |
-| `MAC-02` | epoch | 30 | 1 | 短時間で最後まで動くか確認する | 大。本実験の重みとして使用不可 |
+| `MAC-01` | バージョン名 | `163` | `163_local_mac_threshold_sweep` | 元実験と最初のMac実験の重み・出力を上書きしない | 精度への影響なし |
+| `MAC-02` | epoch | 30 | 5 | 重み保存と検出傾向を短時間で確認する | 大。本実験の重みとして使用不可 |
 | `MAC-03` | batch size | 8 | 1 | 16GB Macのメモリ使用量を抑える | あり。勾配更新条件が変わる |
 | `MAC-04` | workers | 4 | 0 | macOSの別プロセス読込みトラブルを避ける | 精度への影響なし |
 | `MAC-05` | pin memory | `True` | `False` | CUDAを使用しないため不要 | 精度への影響なし |
@@ -45,6 +45,53 @@ Detection/20250208 Faster R-CNN/
 | `ENV-01` | スクリプト位置から`20260925 CSV_Data`を解決 | 実行するカレントディレクトリに依存させない | CSV内容は変更しない |
 | `TRACE-01` | `run_config.json`を保存 | 実験条件を後から確認できるようにする | なし |
 | `TRACE-02` | 乱数seedを42に固定 | 同じ条件で再実行しやすくする | なし |
+
+## 検証データによる信頼度閾値調査
+
+最初のMac 5 epoch実験では、固定閾値0.9を超えるBBoxが検証・テストとも0件だった。今回の診断版では、各epochの検証データを一度だけモデル推論し、同一の生予測へ次の閾値を適用する。
+
+```text
+0.1 / 0.3 / 0.5 / 0.7 / 0.9
+```
+
+| ID | 内容 | 理由 | 学習・重みへの影響 |
+|---|---|---|---|
+| `EVAL-01` | 検証データだけで5閾値を比較 | テストデータを閾値選定へ使う情報漏洩を避ける | なし |
+| `EVAL-01` | 閾値ごとのBBox画像を保存 | 低い閾値で候補BBoxが出ているか目視確認する | なし |
+| `EVAL-01` | BBox数、件数一致率、IoU、Precision、Recall、F1をCSV/JSONへ保存 | 「BBoxが出た」だけでなく位置と過検出・見逃しを比較する | なし |
+| `EVAL-01` | BBox数・F1・対応IoUの閾値比較グラフを保存 | 5閾値の傾向と選択値を一目で確認する | なし |
+| `EVAL-01` | 検証F1を優先して候補閾値を選択 | テスト結果を見ずにテスト用閾値を決める | なし |
+| `EVAL-02` | IoU 0.5以上を正解対応とする | TP/FP/FNを一貫した基準で数える | なし |
+
+候補閾値は、検証F1、BBox数完全一致率、BBox数誤差、対応BBoxの平均IoU、閾値の順で比較する。ただし検証画像は2枚だけなので、選ばれた値はローカル診断候補であり、本実験の最終閾値ではない。
+
+各epochで選んだ閾値だけをテストデータへ適用する。テストデータを見て閾値を選び直す処理は行わない。
+
+## 閾値調査版の出力
+
+最初のMac実験結果を上書きしないよう、次の別フォルダへ保存する。
+
+```text
+Detection/20250208 Faster R-CNN/
+├── TrainingV163_local_mac_threshold_sweep_pthfiles/
+│   └── train_1.pth ～ train_5.pth
+└── TrainingV163_local_mac_threshold_sweep_outputs/
+    ├── run_config.json
+    ├── validation_raw_predictions_epoch1.json ～ epoch5.json
+    ├── validation_threshold_sweep_epoch1.csv ～ epoch5.csv
+    ├── validation_threshold_sweep_epoch1.json ～ epoch5.json
+    ├── validation_threshold_sweep_epoch1.jpg ～ epoch5.jpg
+    ├── validation_threshold_sweep/
+    │   └── epoch_1 ～ epoch_5/
+    │       ├── threshold_0_1/
+    │       ├── threshold_0_3/
+    │       ├── threshold_0_5/
+    │       ├── threshold_0_7/
+    │       └── threshold_0_9/
+    └── test_epoch*_threshold_*/
+```
+
+`validation_raw_predictions_epoch*.json`には、閾値適用前のBBox・スコアと正解BBoxを保存する。すべての閾値で0件だった場合でも、モデルが出した最大スコアを確認できる。
 
 ## CSVの扱い
 
@@ -70,7 +117,7 @@ rg -n 'MAC-02' \
 すべての変更理由を一覧表示する場合:
 
 ```bash
-rg -n '\[(MAC|ENV|TRACE)-' \
+rg -n '\[(MAC|ENV|TRACE|EVAL)-' \
   "Detection/20250208 Faster R-CNN/20260924FasterRCNN_TrainingV163_local_mac.py"
 ```
 
