@@ -66,7 +66,7 @@ def resolve_data_path(path_value):
 # ハイパーパラメータ
 # [MAC-02] 30 → 1: 最後まで動くかだけを短時間で確認する。
 # 精度への影響: 大。1 epochの重みは本実験用ではない。
-EPOCH_NUMBER = 1
+EPOCH_NUMBER = 5
 
 # [MAC-03] 8 → 1: 16GB Macでのメモリ使用量を抑える。
 # 精度への影響: あり。勾配更新の性質が本実験と異なる。
