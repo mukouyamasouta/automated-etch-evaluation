@@ -32,3 +32,7 @@ Before an experiment, record or confirm the commit, script, Dataset, split sizes
 Keep Dataset, weights, generated outputs, and archive history out of Git. Never modify the `Model_backup` source. Check staged files for large or sensitive data before committing or pushing.
 
 If repository documentation conflicts with code, stop before a costly run, report the exact conflict, and resolve which source is authoritative with the user.
+
+## Teach Git while working
+
+Treat the user as a Git beginner and teach only the concepts relevant to the current action. After code changes, show how to inspect them locally and on GitHub, identify the commit that records them, and explain a safe undo path. Prefer `git restore` for an explicitly selected uncommitted file and `git revert` for an already shared commit. Do not use destructive history rewriting as a beginner workflow.
