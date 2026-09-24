@@ -1,0 +1,140 @@
+# プロジェクト状態
+
+最終更新日: 2026-09-24
+
+## 目的
+
+野島氏の手法Bを、Dataset確認、Faster R-CNNの重み作成、U-Netの重み作成、End-To-End推論、寸法・形状評価まで追試する。
+
+## リポジトリ
+
+- ローカル: `/Volumes/met-info/Research Progress/Mukoyama/Gan系トレース手法B`
+- GitHub: `https://github.com/mukouyamasouta/automated-etch-evaluation`
+- ブランチ: `main`
+
+## 完了済み
+
+- GaN主実験用Datasetを`Dataset/`へ配置した。
+- 6個のCSVに含まれる画像パスを`20260925 Image_Dataset`へ更新した。
+- CSVの全1,104パス参照が実在することを確認した。
+- Detectionの基準コードとしてDet163を選定した。
+- Segmentationの基準コードとしてSeg204を選定した。
+- End-To-Endの基準コードとしてSeg204 / Det163を1本に絞った。
+- 旧`.7z`履歴は追試側から除去し、原本を`Model_backup`に残した。
+- コード内のCSV・Dataset参照を、スクリプト位置基準で解決するよう更新した。
+- Gitリポジトリを作成し、GitHubの`main`へpushした。
+
+主要コミット:
+
+- `8ba9a4b` — 手法Bの学習準備
+- `b465281` — End-To-Endコードの選定
+
+## 採用コード
+
+### Detection
+
+`Detection/20250208 Faster R-CNN/20250525FasterRCNN_TrainingV163.py`
+
+- モデル: Faster R-CNN ResNet50-FPN
+- 本設定: 30 epoch、batch size 8、learning rate 0.01
+- 入力: `Original/Images`
+- 教師: Detection CSVの`boxes`と`labels`
+- End-To-Endが使用する重み: `TrainingV163_pthfiles/train_30.pth`
+
+### Segmentation
+
+`Segmentation/20250108 U-Net/20250526UNet_TrainingV204.py`
+
+- モデル: U-Net
+- 本設定: 100 epoch、batch size 16、256×256
+- 入力: `Structure_padded/Images`
+- 教師: `Structure_padded/Labels`
+- End-To-Endが使用する重み: `TrainingV204_pthfiles/train_87.pth`
+
+### End-To-End
+
+`End-To-End/20260925 U-Net--Faster R-CNN/20250526EndToEnd_Seg204_Det163_1.py`
+
+- Detection test.csvの9枚を対象とする。
+- Det163 epoch 30 → 構造切出し → Seg204 epoch 87 → 寸法計測・正解比較の順で処理する。
+
+## Dataset
+
+```text
+Dataset/
+├── 20260925 CSV_Data/
+│   ├── Detection/Original/
+│   │   ├── train.csv    75枚
+│   │   ├── val.csv       8枚
+│   │   └── test.csv      9枚
+│   └── Segmentation/Detected_padded/
+│       ├── train.csv    375構造
+│       ├── val.csv       40構造
+│       └── test.csv      45構造
+└── 20260925 Image_Dataset/
+    ├── Original/
+    │   ├── Images/      全体SEM
+    │   └── Labels/      全体マスク
+    └── Structure_padded/
+        ├── Images/      構造単位SEM
+        └── Labels/      構造単位マスク
+```
+
+Datasetは外付けボリュームにのみ置き、Git管理しない。
+
+## 実行環境
+
+- MacBook Air `MacBookAir10,1`
+- Apple M1、8コア
+- メモリ16GB
+- 元コードはCUDAがなければCPUを使用するため、このMacではCPU実行になる。
+- Detectionの元画像は1280×806である。
+
+本設定のローカル実行は、長時間のCPU高負荷、メモリスワップ、発熱による速度低下、プロセス強制終了、端末の応答低下の可能性がある。本実験には研究室のNVIDIA GPU搭載PCまたは計算サーバーを推奨する。
+
+## 次に行うこと
+
+Det163のローカル動作確認版を作成する。基準コードは保持し、別ファイルとして管理する。
+
+推奨する動作確認条件:
+
+```text
+version: 163_local
+train: 8枚
+val: 2枚
+test: 2枚
+epoch: 1
+batch size: 1
+num workers: 0
+pin memory: False
+drop last: False
+Faster R-CNN min_size: 400
+Faster R-CNN max_size: 640
+```
+
+目的はデータ読込み、forward/backward、評価、`train_1.pth`保存までの接続確認である。精度比較には使用しない。
+
+## 未実施
+
+- Det163ローカル動作確認コードの作成
+- Python仮想環境と依存パッケージの動作確認
+- Det163のローカル1 epoch実行
+- 研究室GPU環境でのDet163本学習
+- Seg204のローカル確認と本学習
+- End-To-End実行
+- 論文値との比較
+
+## 作業ツリーに関する注意
+
+2026-09-24時点で、ユーザーによる次の未コミット変更が存在する。
+
+- ルートの`README.md`が削除状態
+- ルートの`requirements.txt`が削除状態
+- `docs/README.md`が未追跡
+- `docs/requirements.txt`が未追跡
+
+ファイルを`docs/`へ移動した操作と見られるが、ユーザーの変更なので無断で戻したり、別のコミットへ混ぜたりしない。整理方針を確認してから扱う。
+
+## 更新ルール
+
+作業が進んだら、この文書の「完了済み」「次に行うこと」「未実施」を更新する。実験値やエラーの詳細は`docs/EXPERIMENT_LOG.md`へ記録し、この文書には現在の結論だけを残す。
