@@ -132,7 +132,7 @@ Datasetは外付けボリュームにのみ置き、Git管理しない。
 - Detectionの元画像は1280×806である。
 - Mac用仮想環境: `/Users/mu-sota/.venvs/gan-method-b`
 - Python 3.12.13、PyTorch 2.14.0、TorchVision 0.29.0
-- Seg204に必要な`segmentation_models_pytorch`は未導入。実行前に`Segmentation/requirements-segmentation-mac.txt`から追加する。
+- Seg204用環境としてpip 25.0.1を`ensurepip`で復旧し、`segmentation_models_pytorch 0.5.0`と`tqdm 4.70.1`を導入済み。PyTorch 2.14.0とTorchVision 0.29.0は変更していない。
 
 外付けネットワークボリューム内の`.venv`は、小ファイルの配置不良により正常に構築できなかった。学習時は上記のMac内蔵ストレージ側のPythonを明示して使う。
 
@@ -140,7 +140,7 @@ Datasetは外付けボリュームにのみ置き、Git管理しない。
 
 ## 次に行うこと
 
-別ターミナルでSeg204用依存パッケージを追加し、import確認後にMac用5 epochパイロットを実行する。Codex側からはまだ学習を実行しない。
+別ターミナルでSeg204 Mac用5 epochパイロットを再実行する。依存パッケージのimport確認は完了済みであり、Codex側からはまだ学習を実行しない。
 
 対象コード:
 
@@ -169,9 +169,6 @@ CPU threads: 4
 
 ```bash
 cd "/Volumes/met-info/Research Progress/Mukoyama/Gan系トレース手法B"
-/Users/mu-sota/.venvs/gan-method-b/bin/python -m pip install \
-  -r "Segmentation/requirements-segmentation-mac.txt"
-
 /usr/bin/time -p /Users/mu-sota/.venvs/gan-method-b/bin/python -u \
   "Segmentation/20250108 U-Net/20260925UNet_TrainingV204_local_mac.py" \
   2>&1 | tee "/tmp/seg204_local_mac_$(date +%Y%m%d_%H%M%S).log"
@@ -181,7 +178,6 @@ cd "/Volumes/met-info/Research Progress/Mukoyama/Gan系トレース手法B"
 
 - Det163のローカル5 epoch実行
 - 研究室GPU環境でのDet163本学習
-- Seg204依存パッケージのMac環境への追加
 - Seg204のローカル5 epoch実行
 - 研究室GPU環境でのSeg204本学習
 - End-To-End実行

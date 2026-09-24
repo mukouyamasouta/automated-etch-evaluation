@@ -113,11 +113,13 @@ git diff --no-index -- \
 
 ## 実行前の依存パッケージ
 
-現在のMac用仮想環境には`segmentation_models_pytorch`が未導入である。学習前に、別ターミナルから次を実行する。
+この仮想環境は作成時にpipが入っていなかったため、最初にPython同梱の`ensurepip`で復旧する。その後、別ターミナルからSeg204用パッケージを追加する。
 
 ```bash
+/Users/mu-sota/.venvs/gan-method-b/bin/python -m ensurepip --upgrade
+
 /Users/mu-sota/.venvs/gan-method-b/bin/python -m pip install \
   -r "Segmentation/requirements-segmentation-mac.txt"
 ```
 
-インストール後にimport確認を行い、それから学習を開始する。
+2026-09-25に`segmentation_models_pytorch 0.5.0`と`tqdm 4.70.1`の導入およびimport確認を完了した。既存のPyTorch 2.14.0とTorchVision 0.29.0は変更されていない。

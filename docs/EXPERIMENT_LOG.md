@@ -55,6 +55,18 @@
 - `segmentation_models_pytorch`はMac用仮想環境へ未導入であり、学習前に追加が必要である。
 - Seg204の重み学習は未実行。
 
+## 2026-09-25 — Seg204初回起動失敗と環境修復
+
+- 実行ファイル: `Segmentation/20250108 U-Net/20260925UNet_TrainingV204_local_mac.py`
+- 初回実行はimport段階で`ModuleNotFoundError: No module named 'segmentation_models_pytorch'`となり終了した。
+- 終了までの実測: real 10.72秒、user 2.05秒、sys 0.67秒。
+- モデル作成・学習開始前の失敗であり、重みと出力フォルダは作られていない。
+- 原因: Mac用仮想環境にpipと`segmentation_models_pytorch`が入っていなかった。
+- `python -m ensurepip --upgrade`でpip 25.0.1を復旧した。
+- 依存解決のdry-runで既存のPyTorch/TorchVisionが変更されないことを確認してから、`segmentation_models_pytorch 0.5.0`と`tqdm 4.70.1`および依存パッケージを導入した。
+- import確認成功: Python 3.12.13、PyTorch 2.14.0、TorchVision 0.29.0、segmentation-models-pytorch 0.5.0、tqdm 4.70.1。
+- 次の対応: 同じ5 epochコマンドを別ターミナルから再実行する。
+
 ## 実験記録テンプレート
 
 以下を複製して使用する。
