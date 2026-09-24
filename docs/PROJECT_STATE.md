@@ -26,11 +26,16 @@
 - Det163の基準コードを保持したまま、Mac用ローカル動作確認版を作成した。
 - Git初心者向けの継続的な説明方針と操作ガイドを追加した。
 - Mac内蔵ストレージにPython 3.12仮想環境を作り、PyTorchとTorchVisionのimportを確認した。重み学習はまだ実行していない。
+- `experiment/det163-local-mac`ブランチで、バックアップの完全無変更Det163とMac版の対応関係を整理した。
+- Mac版の変更へ`MAC-*`、`ENV-*`、`TRACE-*`番号と変更理由を記載した。
+- 元コードとMac版の変更理由表および保存済みdiffを追加した。
 
 主要コミット:
 
 - `8ba9a4b` — 手法Bの学習準備
 - `b465281` — End-To-Endコードの選定
+- `2d4fe6e` — Mac用Det163動作確認版の初回追加
+- `9d138f7` — Mac環境と実行待ち状態の記録
 
 ## 採用コード
 
@@ -43,6 +48,18 @@
 - 入力: `Original/Images`
 - 教師: Detection CSVの`boxes`と`labels`
 - End-To-Endが使用する重み: `TrainingV163_pthfiles/train_30.pth`
+
+完全無変更の参照元:
+
+`Detection/reference/20250525FasterRCNN_TrainingV163_original.py`
+
+Mac用動作確認版:
+
+`Detection/20250208 Faster R-CNN/20260924FasterRCNN_TrainingV163_local_mac.py`
+
+変更理由表:
+
+`docs/DETECTION_MAC_CHANGES.md`
 
 ### Segmentation
 
