@@ -40,6 +40,28 @@
 - DatasetとCSVは変更していない。
 - 重み学習は未実行。
 
+## 2026-09-25 — Det163 Mac 5 epoch初回実験
+
+- ローカル動作確認であり、論文との精度比較には使用しない。
+- 実行ファイル: `Detection/20250208 Faster R-CNN/20260924FasterRCNN_TrainingV163_local_mac.py`
+- 条件: 学習8枚、検証2枚、テスト2枚、5 epoch、batch size 1、CPU 4スレッド、min 400 / max 640。
+- `train_1.pth`～`train_5.pth`と評価出力の作成に成功した。
+- 固定信頼度閾値0.9では、全epochの検証・テスト画像で予測BBoxが0件だった。
+- 検証IoU・テストIoUは全epochで0.0だった。
+- 結論: 学習・保存経路は動作したが、閾値0.9ではEnd-To-End用の切出しを生成できない。
+
+## 2026-09-25 — Det163検証閾値調査版の準備
+
+- 作業ブランチ: `experiment/det163-threshold-sweep`
+- 出力バージョンを`163_local_mac_threshold_sweep`とし、初回Mac実験を上書きしない。
+- 学習条件は5 epoch、8/2/2枚、batch size 1、CPU 4スレッド、min 400 / max 640のまま変更していない。
+- 各epochの検証生予測に0.1 / 0.3 / 0.5 / 0.7 / 0.9を適用する処理を追加した。
+- 閾値ごとにBBox数、件数一致率、IoU、Precision、Recall、F1、比較グラフとBBox描画画像を保存する。
+- 検証F1を第一基準として候補閾値を選び、その値だけをテストへ適用する。
+- IoU 0.5以上をTPとする1対1greedy matchingを追加した。
+- 合成BBoxによる評価・閾値選択・CSV/JSON保存テストは成功した。
+- 重み学習の再実行はまだ行っていない。
+
 ## 実験記録テンプレート
 
 以下を複製して使用する。

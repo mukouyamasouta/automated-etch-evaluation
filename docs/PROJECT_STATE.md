@@ -1,6 +1,6 @@
 # プロジェクト状態
 
-最終更新日: 2026-09-24
+最終更新日: 2026-09-25
 
 ## 目的
 
@@ -10,7 +10,7 @@
 
 - ローカル: `/Volumes/met-info/Research Progress/Mukoyama/Gan系トレース手法B`
 - GitHub: `https://github.com/mukouyamasouta/automated-etch-evaluation`
-- ブランチ: `main`
+- 現在の作業ブランチ: `experiment/det163-threshold-sweep`
 
 ## 完了済み
 
@@ -29,6 +29,8 @@
 - `experiment/det163-local-mac`ブランチで、バックアップの完全無変更Det163とMac版の対応関係を整理した。
 - Mac版の変更へ`MAC-*`、`ENV-*`、`TRACE-*`番号と変更理由を記載した。
 - 元コードとMac版の変更理由表および保存済みdiffを追加した。
+- Det163 Mac版を5 epoch実行し、重み保存まで完走したが、固定閾値0.9では検証・テストのBBoxが全epochで0件だった。
+- 検証データだけで0.1 / 0.3 / 0.5 / 0.7 / 0.9を比較する閾値調査版を準備した。
 
 主要コミット:
 
@@ -56,6 +58,14 @@
 Mac用動作確認版:
 
 `Detection/20250208 Faster R-CNN/20260924FasterRCNN_TrainingV163_local_mac.py`
+
+現在のMac閾値調査条件:
+
+- 出力バージョン: `163_local_mac_threshold_sweep`
+- 5 epoch、batch size 1、学習8枚、検証2枚、テスト2枚
+- 検証閾値: 0.1 / 0.3 / 0.5 / 0.7 / 0.9
+- 検証データのF1を優先して候補閾値を選択し、テストでは選び直さない
+- 出力: `TrainingV163_local_mac_threshold_sweep_*`
 
 変更理由表:
 
@@ -118,7 +128,7 @@ Datasetは外付けボリュームにのみ置き、Git管理しない。
 
 ## 次に行うこと
 
-別ターミナルから、Det163のMac用ローカル動作確認版を1 epoch実行する。Codex側からはまだ実行しない。
+別ターミナルから、Det163のMac用閾値調査版を5 epoch再実行する。Codex側からはまだ実行しない。
 
 対象コード:
 
@@ -127,20 +137,22 @@ Datasetは外付けボリュームにのみ置き、Git管理しない。
 推奨する動作確認条件:
 
 ```text
-version: 163_local
+version: 163_local_mac_threshold_sweep
 train: 8枚
 val: 2枚
 test: 2枚
-epoch: 1
+epoch: 5
 batch size: 1
 num workers: 0
 pin memory: False
 drop last: False
 Faster R-CNN min_size: 400
 Faster R-CNN max_size: 640
+validation thresholds: 0.1 / 0.3 / 0.5 / 0.7 / 0.9
+match IoU threshold: 0.5
 ```
 
-目的はデータ読込み、forward/backward、評価、`train_1.pth`保存までの接続確認である。精度比較には使用しない。
+目的は、検証データにおける閾値別のBBox数・IoU・Precision/Recall/F1を比較し、低い閾値で候補BBoxが存在するか調査することである。2枚だけの診断なので精度比較には使用しない。
 
 実行コマンド:
 
@@ -148,12 +160,12 @@ Faster R-CNN max_size: 640
 cd "/Volumes/met-info/Research Progress/Mukoyama/Gan系トレース手法B"
 /usr/bin/time -p /Users/mu-sota/.venvs/gan-method-b/bin/python -u \
   "Detection/20250208 Faster R-CNN/20260924FasterRCNN_TrainingV163_local_mac.py" \
-  2>&1 | tee "/tmp/det163_local_mac_$(date +%Y%m%d_%H%M%S).log"
+  2>&1 | tee "/tmp/det163_threshold_sweep_$(date +%Y%m%d_%H%M%S).log"
 ```
 
 ## 未実施
 
-- Det163のローカル1 epoch実行
+- Det163の検証閾値調査5 epoch再実行
 - 研究室GPU環境でのDet163本学習
 - Seg204のローカル確認と本学習
 - End-To-End実行
@@ -167,6 +179,7 @@ cd "/Volumes/met-info/Research Progress/Mukoyama/Gan系トレース手法B"
 - ルートの`requirements.txt`が削除状態
 - `docs/README.md`が未追跡
 - `docs/requirements.txt`が未追跡
+- `branch`と`--show-current`が未追跡
 
 ファイルを`docs/`へ移動した操作と見られるが、ユーザーの変更なので無断で戻したり、別のコミットへ混ぜたりしない。整理方針を確認してから扱う。
 

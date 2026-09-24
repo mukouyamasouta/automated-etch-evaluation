@@ -1,20 +1,19 @@
-diff --git a/Detection/reference/20250525FasterRCNN_TrainingV163_original.py b/Detection/20250208 Faster R-CNN/20260924FasterRCNN_TrainingV163_local_mac.py
-index f6bcea1..399b1da 100644
 --- a/Detection/reference/20250525FasterRCNN_TrainingV163_original.py
-+++ b/Detection/20250208 Faster R-CNN/20260924FasterRCNN_TrainingV163_local_mac.py	
-@@ -1,4 +1,10 @@
++++ b/Detection/20250208 Faster R-CNN/20260924FasterRCNN_TrainingV163_local_mac.py
+@@ -1,4 +1,11 @@
 -# SEM画像　エッジ強調の削除　初期化関数定義 バッチサイズ0.01 損失関数GIoU DROP_LASTなど設定追加 #データフォルダ名をsqauredに変更 paddingの学習 新データ(Original)試す, バッチ４ リサイズなし 損失関数戻す
 +# Det163をM1 MacBook Air（16GB）で安全に動作確認するための複製版。
 +# 完全無変更の元コード: ../reference/20250525FasterRCNN_TrainingV163_original.py
-+# 主な変更: 1 epoch、少数データ、batch size 1、CPU 4スレッド、モデル内部の縮小。
++# 主な変更: 5 epoch、少数データ、batch size 1、CPU 4スレッド、モデル内部の縮小、検証閾値調査。
 +# この版で作る重みは接続確認用であり、論文再現や最終精度の評価には使用しない。
 +#
 +# 変更理由の一覧: ../../docs/DETECTION_MAC_CHANGES.md
-+# コード内の [MAC-*] は計算量調整、[ENV-*] はパス適合、[TRACE-*] は再現性記録を表す。
++# コード内の [MAC-*] は計算量調整、[ENV-*] はパス適合、[TRACE-*] は再現性記録、
++# [EVAL-*] は学習条件を変えない評価・閾値診断を表す。
  # %% モジュール＆パッケージ
  import os
  import torch
-@@ -18,26 +24,75 @@ import csv
+@@ -18,26 +25,80 @@
  from sklearn.metrics import precision_recall_curve
  import matplotlib.pyplot as plt
  import cv2
@@ -24,7 +23,7 @@ index f6bcea1..399b1da 100644
 -version_number = 163
 +# [MAC-01] 元のV163出力と混同・上書きしないため、Mac確認用の名前へ分離する。
 +# 精度への影響: なし。保存フォルダ名だけが変わる。
-+version_number = "163_local_mac"
++version_number = "163_local_mac_threshold_sweep"
  IMAGE_SIZE = None
 +
 +# [ENV-01] 実行場所に依存せず、現在の20260925 Datasetを参照する。
@@ -61,9 +60,9 @@ index f6bcea1..399b1da 100644
  # ハイパーパラメータ
 -EPOCH_NUMBER = 30
 -BATCH_SIZE = 8
-+# [MAC-02] 30 → 1: 最後まで動くかだけを短時間で確認する。
-+# 精度への影響: 大。1 epochの重みは本実験用ではない。
-+EPOCH_NUMBER = 1
++# [MAC-02] 30 → 5: 重み保存と検出傾向を短時間で確認する。
++# 精度への影響: 大。5 epochの重みは本実験用ではない。
++EPOCH_NUMBER = 5
 +
 +# [MAC-03] 8 → 1: 16GB Macでのメモリ使用量を抑える。
 +# 精度への影響: あり。勾配更新の性質が本実験と異なる。
@@ -73,6 +72,8 @@ index f6bcea1..399b1da 100644
 -NUM_WORKERS = 4
 -PIN_MEMORY = True
 -DROP_LAST = True
+-# 分類における信頼度の閾値
+-score_threshold = 0.9
 +
 +# [MAC-04] 4 → 0: macOSの別プロセス読込みによる不安定さを避ける。
 +# 精度への影響: なし。データ読込み速度だけに影響する。
@@ -85,8 +86,13 @@ index f6bcea1..399b1da 100644
 +# [MAC-06] True → False: 少数データを捨てずに8枚すべて使う。
 +# 精度への影響: 本確認版ではあり。ただし本実験との比較対象にはしない。
 +DROP_LAST = False
- # 分類における信頼度の閾値
- score_threshold = 0.9
++# [EVAL-01] 閾値選定には検証データだけを使い、テストデータは使わない。
++# 学習への影響: なし。モデル更新後のBBoxを残す基準だけを比較する。
++VALIDATION_THRESHOLDS = [0.1, 0.3, 0.5, 0.7, 0.9]
++
++# [EVAL-02] Precision/Recall/F1で正解とみなすBBox IoUの下限。
++# 学習への影響: なし。評価指標の定義だけに使用する。
++MATCH_IOU_THRESHOLD = 0.5
  # 通常画像かセグメンテーション済み画像か
  use_segmented = False
  # モデル、出力結果を保存するディレクトリ
@@ -98,14 +104,14 @@ index f6bcea1..399b1da 100644
  }
  for path in output_dirs.values():
      os.makedirs(path, exist_ok=True)
-@@ -45,13 +100,32 @@ for path in output_dirs.values():
+@@ -45,13 +106,35 @@
  model_dir   = output_dirs["models"]
  results_dir = output_dirs["results"]
  
 +# [TRACE-01] 実験条件を出力と一緒に残し、後からGit差分と対応付ける。
 +# 精度への影響: なし。run_config.jsonを追加するだけである。
 +run_config = {
-+    "purpose": "Mac local smoke test; not for thesis accuracy comparison",
++    "purpose": "Mac local validation-threshold diagnostic; not for thesis accuracy comparison",
 +    "version": version_number,
 +    "epochs": EPOCH_NUMBER,
 +    "batch_size": BATCH_SIZE,
@@ -117,6 +123,9 @@ index f6bcea1..399b1da 100644
 +    "model_max_size": MODEL_MAX_SIZE,
 +    "cpu_threads": CPU_THREADS,
 +    "random_seed": RANDOM_SEED,
++    "validation_thresholds": VALIDATION_THRESHOLDS,
++    "match_iou_threshold": MATCH_IOU_THRESHOLD,
++    "threshold_selection_data": "validation only",
 +}
 +with open(results_dir / "run_config.json", "w", encoding="utf-8") as config_file:
 +    json.dump(run_config, config_file, ensure_ascii=False, indent=2)
@@ -132,7 +141,7 @@ index f6bcea1..399b1da 100644
              boxes = ast.literal_eval(row['boxes'])
              labels = ast.literal_eval(row['labels'])
              dataset.append({
-@@ -61,14 +135,27 @@ def read_df(csv_file):
+@@ -61,14 +144,27 @@
              })
      return dataset
  
@@ -163,7 +172,7 @@ index f6bcea1..399b1da 100644
  # %% データ前処理
  class CustomDataset(Dataset):
      def __init__(self, dataset, transform=None, use_segmented=False, image_size=(256, 256)):
-@@ -144,8 +231,13 @@ def initialize_weights(m):
+@@ -144,8 +240,13 @@
              nn.init.constant_(m.bias, 0)
  
  # %% モデル設定
@@ -179,7 +188,7 @@ index f6bcea1..399b1da 100644
  
  # 分類クラス数（背景 + 1クラス）
  num_classes = 2
-@@ -157,8 +249,18 @@ model.roi_heads.box_predictor = torchvision.models.detection.faster_rcnn.FastRCN
+@@ -157,8 +258,18 @@
  # 初期化適用（box_predictor のみ）
  model.roi_heads.box_predictor.apply(initialize_weights)
  
@@ -200,7 +209,7 @@ index f6bcea1..399b1da 100644
  model.to(device)
  
  # %% 学習設定
-@@ -227,10 +329,10 @@ def define_iou(box1, box2):
+@@ -227,10 +338,10 @@
          return 0.0
  
      overlap_area = (x_overlap_max - x_overlap_min) * (y_overlap_max - y_overlap_min)
@@ -213,16 +222,399 @@ index f6bcea1..399b1da 100644
      iou = overlap_area / (box1_area + box2_area - overlap_area)
      return iou
  
-@@ -273,7 +375,7 @@ def evaluate_model(model, data_loader, device, score_threshold, define_iou):
-                     all_image_ious.append(image_iou)
-                 # 予測画像と正解の検出ボックス数が一致しないサンプルはスキップ
-                 else:
--                    skipped_samples += 1 
-+                    skipped_samples += 1
+@@ -247,69 +358,251 @@
+     image_iou = sum(ious) / len(ious) if ious else 0.0
+     return ious, image_iou
  
-                 all_predictions.append({
+-# %% モデルの評価（検証・テスト）
+-def evaluate_model(model, data_loader, device, score_threshold, define_iou):
++# %% モデルの推論結果を1回だけ収集
++def collect_model_predictions(model, data_loader, device):
++    """閾値適用前の生予測を収集し、複数閾値で同じ予測を比較できるようにする。"""
+     model.eval()
+-    all_predictions = []
+-    all_image_ious = []
+-
++    collected = []
+     image_counter = 0
+-    skipped_samples = 0
+ 
+     with torch.no_grad():
+         for images, targets in data_loader:
+             images = [img.to(device) for img in images]
+-            # 予測（検出ボックスとその分類クラス、信頼度）
+             predictions = model(images)
+ 
+             for j, prediction in enumerate(predictions):
+-                # 予測結果の信頼度によるフィルタリング
+-                filtered_boxes, filtered_labels, filtered_scores = filter_predictions(prediction, score_threshold)
+-                gt_boxes = targets[j]["boxes"].cpu().numpy()
+-                # 予測結果の評価（1枚の画像についてFiltered検出ボックスと正解のIoUを算出、またそれらの平均を算出）
+-                ious, image_iou = calculate_ious(gt_boxes, filtered_boxes, define_iou)
+-
+-                if image_iou is not None:
+-                    all_image_ious.append(image_iou)
+-                # 予測画像と正解の検出ボックス数が一致しないサンプルはスキップ
+-                else:
+-                    skipped_samples += 1 
+-
+-                all_predictions.append({
++                # -infを指定し、TorchVisionが返した候補をスコア順に捨てず取得する。
++                boxes, labels, scores = filter_predictions(prediction, float("-inf"))
++                gt_boxes = targets[j]["boxes"].cpu().numpy().tolist()
++                gt_boxes = sorted(gt_boxes, key=lambda box: box[0])
++                collected.append({
                      "image_index": f"pred_{image_counter}",
-@@ -383,4 +485,4 @@ plt.ylim(0.0, 1.0)
+-                    "boxes": filtered_boxes,
+-                    "labels": filtered_labels,
+-                    "scores": filtered_scores,
+-                    "ious": ious,
+-                    "image_iou": image_iou
++                    "raw_boxes": boxes,
++                    "raw_labels": labels,
++                    "raw_scores": scores,
++                    "gt_boxes": gt_boxes,
+                 })
+-
+                 image_counter += 1
+-    # 全画像の平均IoUを算出
+-    mean_iou = sum(all_image_ious) / len(all_image_ious) if all_image_ious else 0.0
+-    return all_predictions, mean_iou, skipped_samples
++
++    return collected
++
++
++def greedy_match_boxes(gt_boxes, pred_boxes, iou_threshold):
++    """IoUが高い組から1対1対応させ、TPと対応IoUを返す。"""
++    candidates = []
++    for gt_index, gt_box in enumerate(gt_boxes):
++        for pred_index, pred_box in enumerate(pred_boxes):
++            iou = float(define_iou(gt_box, pred_box))
++            if iou >= iou_threshold:
++                candidates.append((iou, gt_index, pred_index))
++
++    matched_gt = set()
++    matched_pred = set()
++    matched_ious = []
++    for iou, gt_index, pred_index in sorted(candidates, reverse=True):
++        if gt_index in matched_gt or pred_index in matched_pred:
++            continue
++        matched_gt.add(gt_index)
++        matched_pred.add(pred_index)
++        matched_ious.append(iou)
++
++    return matched_ious
++
++
++def evaluate_collected_predictions(collected, score_threshold, match_iou_threshold):
++    """収集済み予測へ閾値を適用し、BBox数・IoU・PR/F1を集計する。"""
++    predictions = []
++    per_image = []
++    exact_count_image_ious = []
++    all_matched_ious = []
++    total_gt = 0
++    total_pred = 0
++    total_tp = 0
++
++    for record in collected:
++        selected = [
++            (box, label, score)
++            for box, label, score in zip(
++                record["raw_boxes"], record["raw_labels"], record["raw_scores"]
++            )
++            if score >= score_threshold
++        ]
++        pred_boxes = [item[0] for item in selected]
++        pred_labels = [item[1] for item in selected]
++        pred_scores = [item[2] for item in selected]
++        gt_boxes = record["gt_boxes"]
++
++        ordered_ious, image_iou = calculate_ious(gt_boxes, pred_boxes, define_iou)
++        if image_iou is not None:
++            exact_count_image_ious.append(float(image_iou))
++
++        matched_ious = greedy_match_boxes(gt_boxes, pred_boxes, match_iou_threshold)
++        tp = len(matched_ious)
++        fp = len(pred_boxes) - tp
++        fn = len(gt_boxes) - tp
+ 
++        total_gt += len(gt_boxes)
++        total_pred += len(pred_boxes)
++        total_tp += tp
++        all_matched_ious.extend(matched_ious)
++
++        predictions.append({
++            "image_index": record["image_index"],
++            "boxes": pred_boxes,
++            "labels": pred_labels,
++            "scores": pred_scores,
++            "ious": ordered_ious,
++            "image_iou": image_iou,
++        })
++        per_image.append({
++            "image_index": record["image_index"],
++            "gt_box_count": len(gt_boxes),
++            "pred_box_count": len(pred_boxes),
++            "count_difference": len(pred_boxes) - len(gt_boxes),
++            "exact_count_match": len(pred_boxes) == len(gt_boxes),
++            "true_positive": tp,
++            "false_positive": fp,
++            "false_negative": fn,
++            "mean_matched_iou": float(np.mean(matched_ious)) if matched_ious else 0.0,
++            "max_selected_score": max(pred_scores) if pred_scores else None,
++        })
++
++    total_fp = total_pred - total_tp
++    total_fn = total_gt - total_tp
++    precision = total_tp / (total_tp + total_fp) if total_tp + total_fp else 0.0
++    recall = total_tp / (total_tp + total_fn) if total_tp + total_fn else 0.0
++    f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
++    exact_count_images = sum(item["exact_count_match"] for item in per_image)
++
++    summary = {
++        "score_threshold": score_threshold,
++        "match_iou_threshold": match_iou_threshold,
++        "image_count": len(per_image),
++        "total_gt_boxes": total_gt,
++        "total_pred_boxes": total_pred,
++        "mean_pred_boxes_per_image": total_pred / len(per_image) if per_image else 0.0,
++        "mean_absolute_count_error": (
++            float(np.mean([abs(item["count_difference"]) for item in per_image]))
++            if per_image else 0.0
++        ),
++        "exact_count_images": exact_count_images,
++        "exact_count_rate": exact_count_images / len(per_image) if per_image else 0.0,
++        "true_positive": total_tp,
++        "false_positive": total_fp,
++        "false_negative": total_fn,
++        "precision": precision,
++        "recall": recall,
++        "f1": f1,
++        "mean_matched_iou": float(np.mean(all_matched_ious)) if all_matched_ious else 0.0,
++        "mean_iou_exact_count_images": (
++            float(np.mean(exact_count_image_ious)) if exact_count_image_ious else 0.0
++        ),
++        "skipped_count_mismatch_images": len(per_image) - exact_count_images,
++        "per_image": per_image,
++    }
++    return predictions, summary
++
++
++def select_validation_threshold(summaries):
++    """検証F1を優先し、同点時はBBox数一致とIoUで候補閾値を決める。"""
++    return max(
++        summaries,
++        key=lambda item: (
++            item["f1"],
++            item["exact_count_rate"],
++            -item["mean_absolute_count_error"],
++            item["mean_matched_iou"],
++            item["score_threshold"],
++        ),
++    )
++
+ # %% 予測結果の記録
+-def save_predictions_to_json(predictions, mean_iou, skipped_count, results_dir, epoch, prefix):
++def save_predictions_to_json(predictions, summary, results_dir, epoch, prefix):
+     filename = os.path.join(results_dir, f"{prefix}_predictions_epoch{epoch}.json")
+     data = {
+         f"{prefix}_predictions": predictions,
+-        f"mean_{prefix}_iou (excluding unmatched predictions)": mean_iou,
+-        f"{prefix}_skipped_samples": skipped_count
++        f"{prefix}_summary": summary,
+     }
+     with open(filename, 'w') as f:
+         json.dump(data, f, indent=4)
+ 
++
++def save_raw_predictions_to_json(collected, results_dir, epoch):
++    filename = os.path.join(results_dir, f"validation_raw_predictions_epoch{epoch}.json")
++    with open(filename, 'w') as f:
++        json.dump(collected, f, indent=4)
++
++
++def save_threshold_sweep(summaries, selected_summary, results_dir, epoch):
++    """検証閾値ごとの集計をJSONとCSVへ保存する。"""
++    json_path = os.path.join(results_dir, f"validation_threshold_sweep_epoch{epoch}.json")
++    with open(json_path, 'w') as f:
++        json.dump({
++            "epoch": epoch,
++            "selection_data": "validation only",
++            "selection_rule": (
++                "highest F1, then exact-count rate, lower count error, "
++                "matched IoU, and higher threshold"
++            ),
++            "selected_threshold": selected_summary["score_threshold"],
++            "selection_warning": (
++                "diagnostic only; 2 validation images are insufficient for a final threshold"
++            ),
++            "threshold_summaries": summaries,
++        }, f, indent=4)
++
++    csv_path = os.path.join(results_dir, f"validation_threshold_sweep_epoch{epoch}.csv")
++    csv_rows = [{key: value for key, value in item.items() if key != "per_image"} for item in summaries]
++    with open(csv_path, 'w', newline='') as f:
++        writer = csv.DictWriter(f, fieldnames=csv_rows[0].keys())
++        writer.writeheader()
++        writer.writerows(csv_rows)
++
++    # [EVAL-01] 閾値ごとのBBox数、F1、IoUを1枚で比較できるグラフを保存する。
++    thresholds = [item["score_threshold"] for item in summaries]
++    predicted_counts = [item["total_pred_boxes"] for item in summaries]
++    expected_count = summaries[0]["total_gt_boxes"]
++    f1_values = [item["f1"] for item in summaries]
++    matched_ious = [item["mean_matched_iou"] for item in summaries]
++
++    figure, axes = plt.subplots(2, 1, figsize=(9, 9), sharex=True)
++    axes[0].plot(thresholds, predicted_counts, marker='o', label='Predicted BBoxes')
++    axes[0].axhline(
++        expected_count, color='red', linestyle='--', label=f'Ground truth BBoxes ({expected_count})'
++    )
++    axes[0].set_ylabel('BBox count')
++    axes[0].grid()
++    axes[0].legend()
++
++    axes[1].plot(thresholds, f1_values, marker='o', label='F1 @ IoU 0.5')
++    axes[1].plot(thresholds, matched_ious, marker='o', label='Mean matched IoU')
++    axes[1].axvline(
++        selected_summary["score_threshold"],
++        color='green', linestyle='--',
++        label=f'Selected ({selected_summary["score_threshold"]:.1f})',
++    )
++    axes[1].set_xlabel('Score threshold')
++    axes[1].set_ylabel('Metric')
++    axes[1].set_ylim(0.0, 1.0)
++    axes[1].grid()
++    axes[1].legend()
++
++    figure.suptitle(f'Validation threshold sweep - epoch {epoch}')
++    figure.tight_layout()
++    figure.savefig(
++        os.path.join(results_dir, f"validation_threshold_sweep_epoch{epoch}.jpg"),
++        dpi=150,
++        bbox_inches='tight',
++    )
++    plt.close(figure)
++
+ # %% 検出ボックスを描画した予測画像の保存
+-def save_images(data_loader, device, predictions, results_dir, epoch, score_threshold):
+-    output_folder = os.path.join(results_dir, f"test_epoch{epoch}")
++def save_images(data_loader, predictions, output_folder):
+     os.makedirs(output_folder, exist_ok=True)
+ 
+     image_idx = 0
+     with torch.no_grad():
+         for images, _ in data_loader:
+-            images = [img.to(device) for img in images]
+-
+             for img_tensor in images:
+                 if image_idx >= len(predictions):
+                     break
+@@ -322,11 +615,9 @@
+                 draw = ImageDraw.Draw(pil_img)
+ 
+                 for box, label, score in zip(pred["boxes"], pred["labels"], pred["scores"]):
+-                    if score > score_threshold:
+-                        xmin, ymin, xmax, ymax = map(int, box)
+-                        # 検出ボックスの描画
+-                        draw.rectangle([xmin, ymin, xmax, ymax], outline="red", width=3)
+-                        draw.text((xmin, ymin), f"class {label}: score {score:.2f}", fill="red")
++                    xmin, ymin, xmax, ymax = map(int, box)
++                    draw.rectangle([xmin, ymin, xmax, ymax], outline="red", width=3)
++                    draw.text((xmin, ymin), f"class {label}: score {score:.2f}", fill="red")
+ 
+                 img_name = f"pred_{image_idx}.tif"
+                 pil_img.save(os.path.join(output_folder, img_name))
+@@ -341,26 +632,75 @@
+     print(f"Epoch {epoch+1}, Train Loss: {epoch_loss:.4f}")
+     # モデル保存
+     torch.save(model.state_dict(), f"{model_dir}/train_{epoch+1}.pth")
+-    # 検証
+-    val_predictions, mean_val_iou, val_skipped = evaluate_model(
+-        model, val_loader, device, score_threshold, define_iou
++
++    # [EVAL-01] 検証データを1回だけ推論し、同じ生予測で5閾値を公平に比較する。
++    raw_val_predictions = collect_model_predictions(model, val_loader, device)
++    save_raw_predictions_to_json(raw_val_predictions, results_dir, epoch + 1)
++    validation_results = []
++    validation_predictions_by_threshold = {}
++    for threshold in VALIDATION_THRESHOLDS:
++        val_predictions, val_summary = evaluate_collected_predictions(
++            raw_val_predictions, threshold, MATCH_IOU_THRESHOLD
++        )
++        validation_results.append(val_summary)
++        validation_predictions_by_threshold[threshold] = val_predictions
++
++        threshold_name = str(threshold).replace('.', '_')
++        threshold_image_dir = (
++            results_dir / "validation_threshold_sweep" /
++            f"epoch_{epoch+1}" / f"threshold_{threshold_name}"
++        )
++        save_images(val_loader, val_predictions, threshold_image_dir)
++
++        print(
++            f"Validation threshold={threshold:.1f}: "
++            f"boxes={val_summary['total_pred_boxes']}, "
++            f"exact_count_rate={val_summary['exact_count_rate']:.3f}, "
++            f"matched_IoU={val_summary['mean_matched_iou']:.3f}, "
++            f"P/R/F1={val_summary['precision']:.3f}/"
++            f"{val_summary['recall']:.3f}/{val_summary['f1']:.3f}"
++        )
++
++    selected_val_summary = select_validation_threshold(validation_results)
++    selected_threshold = selected_val_summary["score_threshold"]
++    val_predictions = validation_predictions_by_threshold[selected_threshold]
++    save_threshold_sweep(
++        validation_results, selected_val_summary, results_dir, epoch + 1
+     )
+-    print(f"Validation IoU (excluding unmatched predictions): {mean_val_iou:.4f}, Skipped: {val_skipped}")
+-    # テスト
+-    test_predictions, mean_test_iou, test_skipped = evaluate_model(
+-        model, test_loader, device, score_threshold, define_iou
++    print(f"Selected threshold from validation only: {selected_threshold:.1f}")
++
++    # [EVAL-01] テストデータでは閾値を選び直さず、検証で選んだ値だけを適用する。
++    raw_test_predictions = collect_model_predictions(model, test_loader, device)
++    test_predictions, test_summary = evaluate_collected_predictions(
++        raw_test_predictions, selected_threshold, MATCH_IOU_THRESHOLD
+     )
+-    print(f"Test IoU (excluding unmatched predictions): {mean_test_iou:.4f}, Skipped: {test_skipped}")
++    print(
++        f"Test with validation-selected threshold={selected_threshold:.1f}: "
++        f"boxes={test_summary['total_pred_boxes']}, "
++        f"matched_IoU={test_summary['mean_matched_iou']:.3f}, "
++        f"F1={test_summary['f1']:.3f}"
++    )
+ 
+     mean_ious.append({
+         "epoch": epoch + 1,
+-        "mean_val_iou": mean_val_iou,
+-        "mean_test_iou": mean_test_iou
++        "selected_threshold": selected_threshold,
++        "mean_val_iou": selected_val_summary["mean_iou_exact_count_images"],
++        "mean_test_iou": test_summary["mean_iou_exact_count_images"],
++        "val_f1": selected_val_summary["f1"],
++        "test_f1": test_summary["f1"],
+     })
+     # 予測結果の保存
+-    save_predictions_to_json(val_predictions, mean_val_iou, val_skipped, results_dir, epoch + 1, "val")
+-    save_predictions_to_json(test_predictions, mean_test_iou, test_skipped, results_dir, epoch + 1, "test")
+-    save_images(test_loader, device, test_predictions, results_dir, epoch + 1, score_threshold)
++    save_predictions_to_json(
++        val_predictions, selected_val_summary, results_dir, epoch + 1, "val"
++    )
++    save_predictions_to_json(
++        test_predictions, test_summary, results_dir, epoch + 1, "test"
++    )
++    save_images(
++        test_loader,
++        test_predictions,
++        results_dir / f"test_epoch{epoch+1}_threshold_{str(selected_threshold).replace('.', '_')}",
++    )
+ 
+ # 各エポックにおける平均IoU（検証・テスト）の記録
+ mean_iou_filename = f"{results_dir}/mean_ious.json"
+@@ -383,4 +723,4 @@
  
  # グラフの保存
  plt.savefig(os.path.join(results_dir, 'mean_iou.jpg'))
