@@ -1,0 +1,187 @@
+--- a/Segmentation/reference/20250526UNet_TrainingV204_original.py
++++ b/Segmentation/20250108 U-Net/20260925UNet_TrainingV204_local_mac.py
+@@ -1,4 +1,11 @@
+-# Detected 増強なし 輝度均等化削除 画像サイズ(128,128)　paddedデータ データ更新 画像サイズ(256,256) 誤差範囲示す 増強を反転に変更 輝度均等化　エッジ強調0.5 バッチサイズ16 198と同条件
++# Seg204をM1 MacBook Air（16GB）で安全に試すための複製版。
++# 完全無変更の元コード: ../reference/20250526UNet_TrainingV204_original.py
++# 主な変更: 5 epoch、少数データ、batch size 1、CPU 4スレッド。
++# 256×256、左右反転、輝度均等化、エッジ強調、U-Net、損失関数は元コードを維持する。
++# この版で作る重みはローカル学習確認用であり、論文再現や最終精度の評価には使用しない。
++#
++# 変更理由の一覧: ../../docs/SEGMENTATION_MAC_CHANGES.md
++# コード内の [SEG-MAC-*] は計算量調整、[ENV-*] はパス適合、[TRACE-*] は再現性記録を表す。
+ # %% モジュール＆パッケージ
+ import pandas as pd
+ import cv2
+@@ -20,18 +27,62 @@
+ from tqdm import tqdm
+ import os
+ import shutil
++import json
++from pathlib import Path
+ 
+ # %% 設定
+-version_number = 204
++# [SEG-MAC-01] 元のV204出力と混同・上書きしないため、Mac確認用の名前へ分離する。
++# 精度への影響: なし。保存フォルダ名だけが変わる。
++version_number = "204_local_mac"
+ IMAGE_SIZE = (256,256)
++
++# [ENV-01] 実行場所に依存せず、現在の20260925 Datasetを参照する。
++# 精度への影響: なし。CSVや画像の内容は変更せず、保存場所だけを解決する。
++SCRIPT_DIR = Path(__file__).resolve().parent
++REPOSITORY_ROOT = SCRIPT_DIR.parents[1]
++CSV_DIR = REPOSITORY_ROOT / "Dataset" / "20260925 CSV_Data" / "Segmentation"
++
++# [SEG-MAC-07] CSV自体は編集せず、読込み後のメモリ上で使用件数だけを絞る。
++# 精度への影響: 大。375/40/45構造ではなく8/2/2構造なので、精度比較には使用できない。
++LOCAL_SMOKE_TEST = True
++TRAIN_SAMPLE_COUNT = 8
++VAL_SAMPLE_COUNT = 2
++TEST_SAMPLE_COUNT = 2
++
++# [SEG-MAC-09] CPU使用を4スレッドに制限し、Mac全体の応答低下と発熱を抑える。
++# 精度への影響: なし。主に速度と端末負荷へ影響する。
++CPU_THREADS = 4
++
++# [TRACE-02] 比較可能な実験にするため乱数を固定する。
++# 精度への影響: 学習結果のばらつき方は変わるが、再実行しやすくなる。
++RANDOM_SEED = 42
++
++def resolve_data_path(path_value):
++    """CSVの相対パスを、このスクリプトの配置場所を基準に解決する。"""
++    path = Path(path_value)
++    return str(path if path.is_absolute() else (SCRIPT_DIR / path).resolve())
+ AUGMENTATION = True
+-NUM_WORKERS = 4
+-PIN_MEMORY = True
+-DROP_LAST = True
++
++# [SEG-MAC-04] 4 → 0: macOSの別プロセス読込みによる不安定さを避ける。
++# 精度への影響: なし。データ読込み速度だけに影響する。
++NUM_WORKERS = 0
++
++# [SEG-MAC-05] True → False: CUDAを使用しないため固定メモリは不要。
++# 精度への影響: なし。CPU環境での転送方式だけに影響する。
++PIN_MEMORY = False
++
++# [SEG-MAC-06] True → False: 少数データを捨てず、最後の端数バッチも使う。
++# 精度への影響: あり。ただし本確認版は本実験との精度比較対象にしない。
++DROP_LAST = False
+ SHUFFLE = True
+ #ハイパーパラメータ
+-EPOCH_NUMBER = 100
+-BATCH_SIZE = 16
++# [SEG-MAC-02] 100 → 5: 重み保存と損失推移を短時間で確認する。
++# 精度への影響: 大。5 epochの重みは本実験用ではない。
++EPOCH_NUMBER = 5
++
++# [SEG-MAC-03] 16 → 1: 16GB MacでU-Net中間特徴のメモリ使用量を抑える。
++# 精度への影響: あり。勾配更新条件が本実験と異なる。
++BATCH_SIZE = 1
+ LEARNING_RATE = 0.001
+ #ステップサイズ = トレーニングデータ数 // バッチサイズ * 減衰エポック間隔
+ STEP_SIZE = 4000 // BATCH_SIZE * 100
+@@ -42,8 +93,8 @@
+ use_detected = True
+ # モデル、出力結果を保存するディレクトリ
+ output_dirs = {
+-    "models": f"TrainingV{version_number}_pthfiles",
+-    "results": f"TrainingV{version_number}_outputs"
++    "models": SCRIPT_DIR / f"TrainingV{version_number}_pthfiles",
++    "results": SCRIPT_DIR / f"TrainingV{version_number}_outputs"
+ }
+ for path in output_dirs.values():
+     os.makedirs(path, exist_ok=True)
+@@ -51,15 +102,55 @@
+ model_dir   = output_dirs["models"]
+ results_dir = output_dirs["results"]
+ 
++# [TRACE-01] 実験条件を出力と一緒に残し、後からGit差分と対応付ける。
++# 精度への影響: なし。run_config.jsonを追加するだけである。
++run_config = {
++    "purpose": "Mac local pilot; not for thesis accuracy comparison",
++    "version": version_number,
++    "epochs": EPOCH_NUMBER,
++    "batch_size": BATCH_SIZE,
++    "learning_rate": LEARNING_RATE,
++    "image_size": list(IMAGE_SIZE),
++    "augmentation": AUGMENTATION,
++    "train_source_samples": TRAIN_SAMPLE_COUNT,
++    "train_samples_after_augmentation": TRAIN_SAMPLE_COUNT * (2 if AUGMENTATION else 1),
++    "val_samples": VAL_SAMPLE_COUNT,
++    "test_samples": TEST_SAMPLE_COUNT,
++    "num_workers": NUM_WORKERS,
++    "pin_memory": PIN_MEMORY,
++    "drop_last": DROP_LAST,
++    "cpu_threads": CPU_THREADS,
++    "random_seed": RANDOM_SEED,
++}
++with open(results_dir / "run_config.json", "w", encoding="utf-8") as config_file:
++    json.dump(run_config, config_file, ensure_ascii=False, indent=2)
++
+ #学習データの読み込み
+-train_file = "../../Dataset/20250515 CSV_Data/Segmentation/Detected_padded/train.csv" if use_detected else "../../Dataset/20250515 CSV_Data/Segmentation/Original/train.csv"
+-val_file = "../../Dataset/20250515 CSV_Data/Segmentation/Detected_padded/val.csv" if use_detected else "../../Dataset/20250515 CSV_Data/Segmentation/Original/val.csv"
+-test_file = "../../Dataset/20250515 CSV_Data/Segmentation/Detected_padded/test.csv" if use_detected else "../../Dataset/20250515 CSV_Data/Segmentation/Original/test.csv"
++dataset_kind = "Detected_padded" if use_detected else "Original"
++train_file = CSV_DIR / dataset_kind / "train.csv"
++val_file = CSV_DIR / dataset_kind / "val.csv"
++test_file = CSV_DIR / dataset_kind / "test.csv"
+ 
+ train_df = pd.read_csv(train_file)
+ val_df = pd.read_csv(val_file)
+ test_df = pd.read_csv(test_file)
+ 
++for dataframe in (train_df, val_df, test_df):
++    for column in ("imgpath", "labelpath"):
++        dataframe[column] = dataframe[column].map(resolve_data_path)
++
++if LOCAL_SMOKE_TEST:
++    # [SEG-MAC-07] DataFrameだけを絞る。元CSVの行は削除・変更しない。
++    train_df = train_df.iloc[:TRAIN_SAMPLE_COUNT].copy()
++    val_df = val_df.iloc[:VAL_SAMPLE_COUNT].copy()
++    test_df = test_df.iloc[:TEST_SAMPLE_COUNT].copy()
++
++print(
++    "[LOCAL SEGMENTATION PILOT] "
++    f"train_source={len(train_df)}, val={len(val_df)}, test={len(test_df)}, "
++    f"epochs={EPOCH_NUMBER}, batch={BATCH_SIZE}, augmentation={AUGMENTATION}"
++)
++
+ # %% データ前処理
+ class Dataset(BaseDataset):
+     def __init__(
+@@ -142,6 +233,10 @@
+ 
+ 
+ # %% データのロード
++# [TRACE-02] DataLoaderのshuffleと重み初期化を再実行しやすくする。
++np.random.seed(RANDOM_SEED)
++torch.manual_seed(RANDOM_SEED)
++
+ train_dataset = Dataset(train_df, image_size=IMAGE_SIZE, augmentation=AUGMENTATION)
+ train_loader  = DataLoader(train_dataset, batch_size = BATCH_SIZE, num_workers = NUM_WORKERS, pin_memory=PIN_MEMORY, drop_last=DROP_LAST, shuffle = SHUFFLE)
+ val_dataset   = Dataset(val_df, image_size=IMAGE_SIZE)
+@@ -268,7 +363,13 @@
+             init.zeros_(m.bias)
+ 
+ # %% モデル設定
+-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
++# [SEG-MAC-08] CUDA自動選択をやめ、Mac確認版ではCPU経路を明示する。
++# 精度への影響: 原則なし。計算装置と速度だけに影響する。
++device = torch.device("cpu")
++
++# [SEG-MAC-09] 4スレッドに制限し、発熱と端末全体の応答低下を抑える。
++torch.set_num_threads(CPU_THREADS)
++print(f"Device: {device}, CPU threads: {torch.get_num_threads()}")
+ unet = UNet_2D().to(device)
+ 
+ # %% 学習設定
+@@ -513,4 +614,4 @@
+ 
+ # グラフの保存
+ plt.savefig(f'{results_dir}/mean_iou.jpg')
+-plt.close()
+\ No newline at end of file
++plt.close()

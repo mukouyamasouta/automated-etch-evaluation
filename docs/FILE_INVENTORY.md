@@ -29,3 +29,15 @@
 ## 元データの保持方針
 
 `Model_backup`は変更も削除もせず、読み取り元として保持します。追試側には`.7z`から展開した実行コードだけを置きます。以後の変更履歴はファイル名の連番ではなくGitコミットで管理します。
+
+## Seg204のMac用ファイル
+
+| ファイル | 用途 | 変更可否 |
+|---|---|---|
+| `Segmentation/reference/20250526UNet_TrainingV204_original.py` | `.py.7z`から展開した完全無変更の比較基準 | 変更しない |
+| `Segmentation/20250108 U-Net/20250526UNet_TrainingV204.py` | 現行Datasetのパスへ適合した本設定コード | Macパイロットでは変更しない |
+| `Segmentation/20250108 U-Net/20260925UNet_TrainingV204_local_mac.py` | 5 epoch・8/2/2件・batch 1・CPU固定のMac用パイロット | Gitで変更履歴を管理する |
+| `docs/SEGMENTATION_MAC_CHANGES.md` | 元コードとMac版の変更理由・影響の説明 | 条件変更時に更新する |
+| `docs/diffs/Seg204_original_to_local_mac.diff` | 完全無変更版とMac版の保存済み差分 | Mac版変更時に再生成する |
+
+Mac版はCSVを変更せず、読込み後のDataFrameだけを先頭8/2/2件へ絞ります。学習8構造は左右反転によって16サンプルになります。
