@@ -25,6 +25,7 @@
 - Gitリポジトリを作成し、GitHubの`main`へpushした。
 - Det163の基準コードを保持したまま、Mac用ローカル動作確認版を作成した。
 - Git初心者向けの継続的な説明方針と操作ガイドを追加した。
+- Mac内蔵ストレージにPython 3.12仮想環境を作り、PyTorchとTorchVisionのimportを確認した。重み学習はまだ実行していない。
 
 主要コミット:
 
@@ -91,12 +92,16 @@ Datasetは外付けボリュームにのみ置き、Git管理しない。
 - メモリ16GB
 - 元コードはCUDAがなければCPUを使用するため、このMacではCPU実行になる。
 - Detectionの元画像は1280×806である。
+- Mac用仮想環境: `/Users/mu-sota/.venvs/gan-method-b`
+- Python 3.12.13、PyTorch 2.14.0、TorchVision 0.29.0
+
+外付けネットワークボリューム内の`.venv`は、小ファイルの配置不良により正常に構築できなかった。学習時は上記のMac内蔵ストレージ側のPythonを明示して使う。
 
 本設定のローカル実行は、長時間のCPU高負荷、メモリスワップ、発熱による速度低下、プロセス強制終了、端末の応答低下の可能性がある。本実験には研究室のNVIDIA GPU搭載PCまたは計算サーバーを推奨する。
 
 ## 次に行うこと
 
-Python 3.12の仮想環境を作成し、Det163のMac用ローカル動作確認版を1 epoch実行する。
+別ターミナルから、Det163のMac用ローカル動作確認版を1 epoch実行する。Codex側からはまだ実行しない。
 
 対象コード:
 
@@ -120,9 +125,17 @@ Faster R-CNN max_size: 640
 
 目的はデータ読込み、forward/backward、評価、`train_1.pth`保存までの接続確認である。精度比較には使用しない。
 
+実行コマンド:
+
+```bash
+cd "/Volumes/met-info/Research Progress/Mukoyama/Gan系トレース手法B"
+/usr/bin/time -p /Users/mu-sota/.venvs/gan-method-b/bin/python -u \
+  "Detection/20250208 Faster R-CNN/20260924FasterRCNN_TrainingV163_local_mac.py" \
+  2>&1 | tee "/tmp/det163_local_mac_$(date +%Y%m%d_%H%M%S).log"
+```
+
 ## 未実施
 
-- Python仮想環境と依存パッケージの動作確認
 - Det163のローカル1 epoch実行
 - 研究室GPU環境でのDet163本学習
 - Seg204のローカル確認と本学習

@@ -289,10 +289,10 @@ def define_iou(box1, box2):
         return 0.0
 
     overlap_area = (x_overlap_max - x_overlap_min) * (y_overlap_max - y_overlap_min)
-    
+
     box1_area = (x1_max - x1_min) * (y1_max - y1_min)
     box2_area = (x2_max - x2_min) * (y2_max - y2_min)
-    
+
     iou = overlap_area / (box1_area + box2_area - overlap_area)
     return iou
 
@@ -335,7 +335,7 @@ def evaluate_model(model, data_loader, device, score_threshold, define_iou):
                     all_image_ious.append(image_iou)
                 # 予測画像と正解の検出ボックス数が一致しないサンプルはスキップ
                 else:
-                    skipped_samples += 1 
+                    skipped_samples += 1
 
                 all_predictions.append({
                     "image_index": f"pred_{image_counter}",
