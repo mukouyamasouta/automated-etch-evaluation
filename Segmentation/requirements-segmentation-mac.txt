@@ -1,0 +1,3 @@
+# Add these Seg204-only packages to the existing Mac environment.
+segmentation-models-pytorch
+tqdm

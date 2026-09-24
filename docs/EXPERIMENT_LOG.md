@@ -40,6 +40,21 @@
 - DatasetとCSVは変更していない。
 - 重み学習は未実行。
 
+## 2026-09-25 — Seg204 Mac用パイロットの準備
+
+- Seg204の本設定コードを上書きせず、Mac用コードを複製した。
+- `Model_backup`の`.py.7z`から完全無変更のSeg204を比較用に展開した。
+- 元コードのSHA-256: `e274905f599b05899f76e164a9b47b1be122a4f8083955abc473a592042302a9`
+- 条件を学習8構造（左右反転込み16サンプル）、検証2構造、テスト2構造、5 epoch、batch size 1へ縮小した。
+- workers 0、pin memory False、drop last False、CPU固定・4スレッド、seed 42とした。
+- 256×256、左右反転、輝度均等化、エッジ強調、U-Net構造、Tversky Loss、学習率は変更していない。
+- Mac版の各変更へ`SEG-MAC-*`、`ENV-*`、`TRACE-*`番号を付け、変更理由表と保存済みdiffを追加した。
+- 作業ブランチ: `experiment/seg204-local-mac`
+- DatasetとCSVは変更していない。
+- Python構文検査は成功した。
+- `segmentation_models_pytorch`はMac用仮想環境へ未導入であり、学習前に追加が必要である。
+- Seg204の重み学習は未実行。
+
 ## 実験記録テンプレート
 
 以下を複製して使用する。

@@ -1,6 +1,6 @@
 # プロジェクト状態
 
-最終更新日: 2026-09-24
+最終更新日: 2026-09-25
 
 ## 目的
 
@@ -10,7 +10,7 @@
 
 - ローカル: `/Volumes/met-info/Research Progress/Mukoyama/Gan系トレース手法B`
 - GitHub: `https://github.com/mukouyamasouta/automated-etch-evaluation`
-- ブランチ: `main`
+- 現在の作業ブランチ: `experiment/seg204-local-mac`
 
 ## 完了済み
 
@@ -29,6 +29,8 @@
 - `experiment/det163-local-mac`ブランチで、バックアップの完全無変更Det163とMac版の対応関係を整理した。
 - Mac版の変更へ`MAC-*`、`ENV-*`、`TRACE-*`番号と変更理由を記載した。
 - 元コードとMac版の変更理由表および保存済みdiffを追加した。
+- Det163 Mac版のepochを5へ変更し、コミット`a6ff6cd`でGitHubへ反映した。重み学習はまだ実行していない。
+- Seg204の完全無変更版、Mac用5 epochパイロット版、変更理由表、保存済みdiffを作成した。
 
 主要コミット:
 
@@ -71,6 +73,25 @@ Mac用動作確認版:
 - 教師: `Structure_padded/Labels`
 - End-To-Endが使用する重み: `TrainingV204_pthfiles/train_87.pth`
 
+完全無変更の参照元:
+
+`Segmentation/reference/20250526UNet_TrainingV204_original.py`
+
+Mac用パイロット版:
+
+`Segmentation/20250108 U-Net/20260925UNet_TrainingV204_local_mac.py`
+
+- 5 epoch、batch size 1
+- 学習8構造（左右反転込み16サンプル）、検証2構造、テスト2構造
+- 256×256、前処理、モデル、損失関数は元コードを維持
+- CPU固定・4スレッド
+- 出力重み: `TrainingV204_local_mac_pthfiles/train_1.pth`～`train_5.pth`
+- 精度再現用ではなく、Mac上で学習・評価・保存の流れを確認するための設定
+
+変更理由表:
+
+`docs/SEGMENTATION_MAC_CHANGES.md`
+
 ### End-To-End
 
 `End-To-End/20260925 U-Net--Faster R-CNN/20250526EndToEnd_Seg204_Det163_1.py`
@@ -111,6 +132,7 @@ Datasetは外付けボリュームにのみ置き、Git管理しない。
 - Detectionの元画像は1280×806である。
 - Mac用仮想環境: `/Users/mu-sota/.venvs/gan-method-b`
 - Python 3.12.13、PyTorch 2.14.0、TorchVision 0.29.0
+- Seg204に必要な`segmentation_models_pytorch`は未導入。実行前に`Segmentation/requirements-segmentation-mac.txt`から追加する。
 
 外付けネットワークボリューム内の`.venv`は、小ファイルの配置不良により正常に構築できなかった。学習時は上記のMac内蔵ストレージ側のPythonを明示して使う。
 
@@ -118,44 +140,50 @@ Datasetは外付けボリュームにのみ置き、Git管理しない。
 
 ## 次に行うこと
 
-別ターミナルから、Det163のMac用ローカル動作確認版を1 epoch実行する。Codex側からはまだ実行しない。
+別ターミナルでSeg204用依存パッケージを追加し、import確認後にMac用5 epochパイロットを実行する。Codex側からはまだ学習を実行しない。
 
 対象コード:
 
-`Detection/20250208 Faster R-CNN/20260924FasterRCNN_TrainingV163_local_mac.py`
+`Segmentation/20250108 U-Net/20260925UNet_TrainingV204_local_mac.py`
 
-推奨する動作確認条件:
+パイロット条件:
 
 ```text
-version: 163_local
-train: 8枚
-val: 2枚
-test: 2枚
-epoch: 1
+version: 204_local_mac
+train: 8構造（左右反転込み16サンプル）
+val: 2構造
+test: 2構造
+epoch: 5
 batch size: 1
 num workers: 0
 pin memory: False
 drop last: False
-Faster R-CNN min_size: 400
-Faster R-CNN max_size: 640
+image size: 256×256
+device: CPU
+CPU threads: 4
 ```
 
-目的はデータ読込み、forward/backward、評価、`train_1.pth`保存までの接続確認である。精度比較には使用しない。
+目的はデータ読込み、forward/backward、損失・IoU記録、評価画像、`train_1.pth`～`train_5.pth`保存までの確認である。精度比較には使用しない。
 
 実行コマンド:
 
 ```bash
 cd "/Volumes/met-info/Research Progress/Mukoyama/Gan系トレース手法B"
+/Users/mu-sota/.venvs/gan-method-b/bin/python -m pip install \
+  -r "Segmentation/requirements-segmentation-mac.txt"
+
 /usr/bin/time -p /Users/mu-sota/.venvs/gan-method-b/bin/python -u \
-  "Detection/20250208 Faster R-CNN/20260924FasterRCNN_TrainingV163_local_mac.py" \
-  2>&1 | tee "/tmp/det163_local_mac_$(date +%Y%m%d_%H%M%S).log"
+  "Segmentation/20250108 U-Net/20260925UNet_TrainingV204_local_mac.py" \
+  2>&1 | tee "/tmp/seg204_local_mac_$(date +%Y%m%d_%H%M%S).log"
 ```
 
 ## 未実施
 
-- Det163のローカル1 epoch実行
+- Det163のローカル5 epoch実行
 - 研究室GPU環境でのDet163本学習
-- Seg204のローカル確認と本学習
+- Seg204依存パッケージのMac環境への追加
+- Seg204のローカル5 epoch実行
+- 研究室GPU環境でのSeg204本学習
 - End-To-End実行
 - 論文値との比較
 
@@ -167,6 +195,7 @@ cd "/Volumes/met-info/Research Progress/Mukoyama/Gan系トレース手法B"
 - ルートの`requirements.txt`が削除状態
 - `docs/README.md`が未追跡
 - `docs/requirements.txt`が未追跡
+- `branch`と`--show-current`が未追跡
 
 ファイルを`docs/`へ移動した操作と見られるが、ユーザーの変更なので無断で戻したり、別のコミットへ混ぜたりしない。整理方針を確認してから扱う。
 
