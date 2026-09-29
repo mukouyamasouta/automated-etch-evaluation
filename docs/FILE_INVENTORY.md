@@ -29,3 +29,11 @@
 ## 元データの保持方針
 
 `Model_backup`は変更も削除もせず、読み取り元として保持します。追試側には`.7z`から展開した実行コードだけを置きます。以後の変更履歴はファイル名の連番ではなくGitコミットで管理します。
+
+## 独立3試行の追加構成（2026-09-29）
+
+`End-To-End/20260929_PipelineB_ThreeTrials/`に、3組を順次推論する`run_three_trials.py`と、希望する評価項目および3試行平均・標本標準偏差を算出する`evaluate_three_trials.py`を追加した。
+
+採用した組合せは、Model_backupの3試行End-to-Endコードと出力に直接対応する、Seg20811/Det1631、Seg20822/Det1632、Seg20833/Det1633である。必要な6個の重みは同フォルダの`weights/`へコピーするが、`.gitignore`によりGit管理しない。
+
+詳細な実行方法は`docs/PIPELINE_B_THREE_TRIALS_GUIDE.md`を参照する。
